@@ -5,7 +5,7 @@
 #SBATCH --partition=compute
 #SBATCH --account=bm1183
 #SBATCH --nodes=1
-#SBATCH --time=08:00:00
+#SBATCH --time=01:00:00
 #SBATCH --mem=0
 set -o errexit -o nounset -o pipefail -o xtrace
 
@@ -13,4 +13,4 @@ set -o errexit -o nounset -o pipefail -o xtrace
 export PYTHONPATH="/home/m/m301049/aqua_processing/"
 
 # execute python script in respective environment 
-/home/m/m301049/.conda/envs/main/bin/python /home/m/m301049/aqua_processing/scripts/to_healpix.py
+/home/m/m301049/.conda/envs/main/bin/python /home/m/m301049/aqua_processing/scripts/calc_tropical_mean.py

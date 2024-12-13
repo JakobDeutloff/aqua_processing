@@ -7,8 +7,8 @@ from src.grid_helpers import merge_grid
 
 # %% load dataset
 ds = (
-    xr.open_dataset(
-        "/work/bm1183/m301049/icon-mpim/experiments/jed0001/jed0001_atm_2d_19790101T000000Z.14054703.nc",
+    xr.open_mfdataset(
+        "/work/bm1183/m301049/icon-mpim/experiments/jed0001/jed0001_atm_2d_daymean_19790131T000000Z.14218015.nc",
         chunks={'time': 1},
     )
     .pipe(merge_grid)
@@ -52,5 +52,5 @@ ds_remap["crs"] = xr.DataArray(
 # %% save dataset to nc
 print('saving')
 ds_remap.to_netcdf(
-    "/work/bm1183/m301049/icon-mpim/experiments/jed0001/jed0001_atm_2d_19790101T000000Z.14054703_remap.nc",
+    "/work/bm1183/m301049/icon-mpim/experiments/jed0001/jed0001_atm_2d_daymean_19790131T000000Z.14218015_remap.nc",
 )
