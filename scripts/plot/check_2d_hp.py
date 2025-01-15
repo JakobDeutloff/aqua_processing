@@ -6,7 +6,9 @@ import xarray as xr
 import easygems.healpix as egh
 
 # %% load data 
-ds = xr.open_dataset('/work/bm1183/m301049/icon-mpim/experiments/jed0001/jed0001_atm_2d_daymean_19790131T000000Z.14218015_remap.nc', chunks={}).pipe(egh.attach_coords)
+ds_control = xr.open_dataset('/work/bm1183/m301049/icon_hcap_data/control/spinup/jed0001_atm_2d_daymean_hp.nc', chunks={}).pipe(egh.attach_coords)
+ds_4K = xr.open_dataset('/work/bm1183/m301049/icon_hcap_data/plus4K/spinup/jed0002_atm_2d_daymean_hp.nc', chunks={}).pipe(egh.attach_coords)
+ds_2K = xr.open_dataset('/work/bm1183/m301049/icon_hcap_data/plus2K/spinup/jed0003_atm_2d_daymean_hp.nc', chunks={}).pipe(egh.attach_coords)
 
 # %% define worldmap function
 def worldmap(var, unit=None, **kwargs):
@@ -18,10 +20,14 @@ def worldmap(var, unit=None, **kwargs):
     im = egh.healpix_show(var, ax=ax, **kwargs)
     fig.colorbar(im, ax=ax, orientation="horizontal", aspect=40, label=unit)
 
-# %% plot lw_cre and clivi
-worldmap(ds['rlut'].isel(time=-1) - ds['rlutws'].isel(time=-1), unit='W m$^{-2}$')
-worldmap((ds['clivi'] + ds['qsvi'] + ds['qgvi']).isel(time=-1), unit='kg m$^{-2}$')
+# %% plot IWP control
+worldmap((ds_control['clivi'] + ds_control['qsvi'] + ds_control['qgvi']).sel(time='1979-06-30'), unit='kg m$^{-2}$')
 
+# %% plot IWP 4K 
+worldmap((ds_4K['clivi'] + ds_4K['qsvi'] + ds_4K['qgvi']).sel(time='1979-08-31'), unit='kg m$^{-2}$')
+
+# %% plot IWP 2K
+worldmap((ds_2K['clivi'] + ds_2K['qsvi'] + ds_2K['qgvi']).sel(time='1979-08-31'), unit='kg m$^{-2}$')
 # %% get tropics
 ds_trop = ds.isel(time=-1).where((ds.lat < 30) & (ds.lat > -30), drop=True)
 

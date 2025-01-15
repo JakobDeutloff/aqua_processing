@@ -159,3 +159,5 @@ plots/
 *.nc 
 *.e*
 *.o*
+.vscode
+data/

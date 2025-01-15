@@ -2,7 +2,6 @@
 import xarray as xr
 import matplotlib.pyplot as plt
 from src.grid_helpers import merge_grid
-import typhon as ty
 
 # %% load data
 o3_fixed = xr.open_dataset(
@@ -12,7 +11,7 @@ v_grid = xr.open_dataset(
     "/work/bm1183/m301049/icon-mpim/experiments/jed0001/jed0001_atm_vgrid_ml.nc"
 )
 o3_cariolle = xr.open_dataset(
-    "/work/bm1183/m301049/icon-mpim/experiments/jed0001/jed0001_atm_3d_ozone_daymean_19790327T000000Z.14236120.nc",
+    "/work/bm1183/m301049/icon-mpim/experiments/jed0011/jed0011_atm_3d_main_daymean_19790730T000000Z.14380341.nc",
     chunks={},
 ).pipe(merge_grid)
 
@@ -49,6 +48,6 @@ ax.set_yscale("log")
 ax.spines[['top', 'right']].set_visible(False)
 ax.set_title(o3_cariolle["time"].values[0].astype('datetime64[D]'))
 fig.tight_layout()
-fig.savefig(f"plots/ozone_profile_comparison_{o3_cariolle['time'].values[0].astype('datetime64[D]')}.png")
+#fig.savefig(f"plots/ozone_profile_comparison_{o3_cariolle['time'].values[0].astype('datetime64[D]')}.png")
 
 # %%
