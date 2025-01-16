@@ -39,11 +39,11 @@ screen_ppi = 254  # PPI of the screen
 fig_width_in = screen_width_pixels / screen_ppi
 fig_height_in = screen_height_pixels / screen_ppi
 
-projection = ccrs.Orthographic()
+projection = ccrs.Mollweide()
 fig, ax = plt.subplots(
     figsize=(fig_width_in, fig_height_in), subplot_kw={"projection": projection}, constrained_layout=True
 )
-fig.set_dpi(500)
+fig.set_dpi(300)
 steelblue = '#07222e'
 ax.set_facecolor(steelblue)
 ax.spines['geo'].set_edgecolor(steelblue)
