@@ -31,17 +31,12 @@ cond = (dummy['clivi'] + dummy['qsvi'] + dummy['qgvi'] + dummy['qrvi'] + dummy['
 
 # %% plot cloud condensate
 
-screen_width_pixels = 3024  # Replace with 3456 for 16-inch
-screen_height_pixels = 1964  # Replace with 2234 for 16-inch
-screen_ppi = 254  # PPI of the screen
-
-# Compute figure size in inches
-fig_width_in = screen_width_pixels / screen_ppi
-fig_height_in = screen_height_pixels / screen_ppi
+fig_height_in = 33.1
+fig_width_in = 46.8
 
 projection = ccrs.Mollweide()
 fig, ax = plt.subplots(
-    figsize=(fig_width_in, fig_height_in), subplot_kw={"projection": projection}, constrained_layout=True
+    figsize=(fig_width_in, fig_height_in), subplot_kw={"projection": projection}
 )
 fig.set_dpi(300)
 steelblue = '#07222e'
@@ -49,7 +44,7 @@ ax.set_facecolor(steelblue)
 ax.spines['geo'].set_edgecolor(steelblue)
 fig.patch.set_facecolor(steelblue)
 ax.set_global()
-
+fig.subplots_adjust(left=0.03, right=0.97)
 _, _, nx, ny = np.array(ax.bbox.bounds, dtype=int)
 
 xlims = ax.get_xlim()
@@ -57,5 +52,5 @@ ylims = ax.get_ylim()
 im = egh.healpix_resample(cond, xlims, ylims, nx, ny, ax.projection, 'nearest', nest=True)
 
 ax.imshow(im, extent=xlims + ylims, origin="lower", cmap=transparent_white_cmap, norm=LogNorm(3e-2, 1e1))
-fig.savefig('plots/screensaver.png', dpi=300)
+fig.savefig('plots/screensaver_print.pdf')
 # %%

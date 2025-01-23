@@ -4,7 +4,7 @@ from src.grid_helpers import merge_grid
 
 # %%
 ds = xr.open_mfdataset(
-    "/work/bm1183/m301049/icon-mpim-4K/experiments/jed0002/jed0002_atm_2d_*.nc",
+    "/work/bm1183/m301049/icon-mpim/experiments/jed0011/jed0011_atm_2d_daymean*.nc",
     chunks={},
 ).pipe(merge_grid)
 
@@ -12,4 +12,4 @@ ds = xr.open_mfdataset(
 tropical_mean = ds.where((ds.clat < 30) & (ds.clat > -30)).mean('ncells')
 
 # %% save to netcdf
-tropical_mean.to_netcdf("/work/bm1183/m301049/icon_hcap_data/plus4K/spinup/jed0002_atm_2d_tropical_mean.nc")
+tropical_mean.to_netcdf("/work/bm1183/m301049/icon_hcap_data/control/production/jed0011_atm_2d_daymean_tropical_mean.nc")
