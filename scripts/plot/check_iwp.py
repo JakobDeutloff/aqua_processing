@@ -17,9 +17,9 @@ ds_4K = xr.open_mfdataset(
 ).pipe(merge_grid)
 ds_2K = xr.open_mfdataset(
     path
-    + "icon-mpim-2K/experiments/jed0033/jed0033_atm_2d_19790910T000000Z.14788260.nc",
+    + "icon-mpim-2K/experiments/jed0033/jed0033_atm_2d_19790913T000000Z.14925828.nc",
     chunks={},
-).pipe(merge_grid)
+).pipe(merge_grid).isel(time=-1)
 
 
 # %%  calculate iwp in tropics
@@ -56,7 +56,7 @@ hist_4K = hist_4K / iwp_4K["ncells"].size
 fig, ax = plt.subplots(1, 1, figsize=(6, 4))
 
 ax.stairs(hist_control, edges, label="control", linestyle="-")
-#ax.stairs(hist_2K, edges, label="2K", linestyle="--")
+ax.stairs(hist_2K, edges, label="2K", linestyle="--")
 ax.stairs(hist_4K, edges, label="4K", linestyle="-.")
 ax.legend()
 ax.set_xscale("log")
