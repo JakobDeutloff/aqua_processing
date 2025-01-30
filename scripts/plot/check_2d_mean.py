@@ -9,7 +9,7 @@ ds_4k = xr.open_dataset('/work/bm1183/m301049/icon_hcap_data/plus4K/spinup/jed00
 ds_4K_prod = xr.open_dataset('/work/bm1183/m301049/icon_hcap_data/plus4K/production/jed0022_atm_2d_daymean_tropical_mean.nc')
 ds_control = xr.open_dataset('/work/bm1183/m301049/icon_hcap_data/control/spinup/jed0001_atm_2d_daymean_tropical_mean.nc')
 ds_control_prod = xr.open_dataset('/work/bm1183/m301049/icon_hcap_data/control/production/jed0011_atm_2d_daymean_tropical_mean.nc')
-ds_full = xr.open_dataset('/work/bm1183/m301049/icon-mpim-2K/experiments/jed0033/jed0033_atm_2d_19790831T000000Z.14788260.nc')
+ds_full = xr.open_dataset('/work/bm1183/m301049/icon-mpim-2K/experiments/jed0033/jed0033_atm_2d_19790930T000000Z.14931256.nc')
 # %% plot timeseries of all variables
 def plot_var(varname, ax):
     ds_control[varname].isel(time=slice(1, None)).plot(ax=ax, label='control', color='black', linestyle='-.')

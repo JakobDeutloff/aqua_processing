@@ -17,9 +17,10 @@ ds_4K = xr.open_mfdataset(
 ).pipe(merge_grid)
 ds_2K = xr.open_mfdataset(
     path
-    + "icon-mpim-2K/experiments/jed0033/jed0033_atm_2d_19790913T000000Z.14925828.nc",
+    + "icon-mpim-2K/experiments/jed0033/jed0033_atm_2d_19790930T000000Z.15016798.nc",
     chunks={},
-).pipe(merge_grid).isel(time=-1)
+).pipe(merge_grid)
+
 
 
 # %%  calculate iwp in tropics
@@ -55,10 +56,30 @@ hist_4K = hist_4K / iwp_4K["ncells"].size
 # %% plot iwp hists
 fig, ax = plt.subplots(1, 1, figsize=(6, 4))
 
-ax.stairs(hist_control, edges, label="control", linestyle="-")
-ax.stairs(hist_2K, edges, label="2K", linestyle="--")
-ax.stairs(hist_4K, edges, label="4K", linestyle="-.")
+ax.stairs(hist_control, edges, label="control", color='k')
+ax.stairs(hist_2K, edges, label="2K", color='orange')
+ax.stairs(hist_4K, edges, label="4K", color='r')
+
 ax.legend()
 ax.set_xscale("log")
+ax.set_ylabel('P(IWP)')
+ax.set_xlabel('IWP / kg m$^{-2}$')
+ax.spines[['top', 'right']].set_visible(False)
+fig.savefig('iwp_hist.png', dpi=300)
+# %%
+ds_trop = get_tropics(xr.concat([ds_2K, ds_2K_last], 'time'))
+
+# %%
+ds_mean = ds_trop.mean('ncells')
+
+# %% plot time series
+def plot_var(varname, ax):
+    ds_mean[varname].plot(ax=ax)
+
+
+fig, axes = plt.subplots(8, 4, figsize=(30, 30), sharex='col')
+
+for i, varname in enumerate(ds_mean.data_vars):
+    plot_var(varname, axes.flat[i])
 
 # %%

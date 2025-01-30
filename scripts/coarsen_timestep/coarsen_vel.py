@@ -1,5 +1,5 @@
 # %%
-from src.coarsening import get_coarse_time, get_ds_list, coarsen_ds
+from src.sampling import get_coarse_time, get_ds_list, coarsen_ds
 
 # %%
 path = "/work/bm1183/m301049/icon-mpim/experiments/jed0011/"
