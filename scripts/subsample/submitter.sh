@@ -13,4 +13,4 @@ set -o errexit -o nounset -o pipefail -o xtrace
 export PYTHONPATH="/home/m/m301049/aqua_processing/"
 
 # execute python script in respective environment 
-/home/m/m301049/.conda/envs/main/bin/python /home/m/m301049/aqua_processing/scripts/subsample/coords_to_data.py jed0011 atm_3d_main_19
+/home/m/m301049/.conda/envs/main/bin/python /home/m/m301049/aqua_processing/scripts/subsample/coords_to_data.py $1 $2
