@@ -10,7 +10,7 @@ filenames = [
     "atm_3d_main_19",
     "atm_3d_rad_19",
     "atm_3d_cloud_19",
-    "atm_3d_vel19",
+    "atm_3d_vel_19",
 ]
 
 # %% concatenate single files
@@ -27,7 +27,6 @@ for run in runs:
                 f"{path}{run}_{file}*.nc",
                 combine="nested",
                 concat_dim=["index"],
-                coords="minimal",
             )
             .drop_duplicates("index")
             .sortby("index")

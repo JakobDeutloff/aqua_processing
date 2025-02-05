@@ -3,6 +3,7 @@ import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
 from src.grid_helpers import merge_grid
+from src.read_data import read_cloudsat
 import pandas as pd
 
 # %% load data
@@ -14,6 +15,9 @@ for run in runs:
         f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_mil.nc"
     )
 
+# %% read cloudsat
+cloudsat = read_cloudsat("2009")
+
 # %% calculate iwp hist
 bins = np.logspace(-6, 1, 70)
 histograms = {}
@@ -22,11 +26,15 @@ for run in runs:
     histograms[run], edges = np.histogram(iwp, bins=bins, density=False)
     histograms[run] = histograms[run] / len(iwp)
 
-# %% plot iwp hists
-fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+histograms["cloudsat"], _ = np.histogram(cloudsat["ice_water_path"]/1e3, bins=bins, density=False)
+histograms["cloudsat"] = histograms["cloudsat"] / len(cloudsat)
 
+# %% plot iwp hists
+fig, ax = plt.subplots(1, 1, figsize=(8, 5))
+colors = {"jed0011": "k", "jed0022": "red", "jed0033": "orange"}
+ax.stairs(histograms["cloudsat"], edges, label="CloudSat", color="k", linewidth=4, alpha=0.5)
 for run in runs:
-    ax.stairs(histograms[run], edges, label=exp_name[run])
+    ax.stairs(histograms[run], edges, label=exp_name[run], color=colors[run])
 
 ax.legend()
 ax.set_xscale("log")
