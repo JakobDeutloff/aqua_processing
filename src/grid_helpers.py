@@ -21,6 +21,7 @@ def merge_grid(data_ds):
     grid = get_grid(data_ds)
     ds = xr.merge([data_ds, grid[list(grid.coords)].rename({"cell": "ncells"})])
     ds = ds.assign(clon=np.degrees(ds.clon), clat=np.degrees(ds.clat))
+    ds = ds.assign_coords(ncells=np.arange(ds.sizes["ncells"]))
     return ds
 
 def to_healpix(ds, save_path=None):

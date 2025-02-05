@@ -1,11 +1,9 @@
 # %%
-print("Importing")
 from src.sampling import subsample_file
 import os
 import sys
 
 # %% get list of all files
-print("starting")
 run = sys.argv[1]
 filetype = sys.argv[2]
 print(f"Processing {run} for {filetype}")
@@ -22,6 +20,5 @@ print("Files to process:", filelist)
 for file in filelist:
     print(f"Processing {file}")
     subsample_file(f"{dir}/{file}", exp_name[run])
-
 
 # %%

@@ -3,6 +3,7 @@ import xarray as xr
 import numpy as np
 import dask.array as da
 from src.grid_helpers import merge_grid
+import os
 
 # %% load 2D data
 runs = ["jed0011", "jed0022", "jed0033"]
@@ -16,19 +17,19 @@ exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 # %%
 for run in runs:
     path = f"/work/bm1183/m301049/{model_config[run]}/experiments/{run}/"
-    ds_2D = xr.open_mfdataset(f"{path}{run}_atm_3d_main_19*.nc", chunks={}).pipe(
+    ds_3D = xr.open_mfdataset(f"{path}{run}_atm_3d_main_19*.nc", chunks={}).pipe(
         merge_grid
     )
 
     # select tropics
-    ds_2D_trop = ds_2D.where((ds_2D.clat < 30) & (ds_2D.clat > -30), drop=True)
+    ds_3D_trop = ds_3D.where((ds_3D.clat < 30) & (ds_3D.clat > -30), drop=True)
 
     # get random coordinates across time and ncells
-    ncells = ds_2D_trop.sizes["ncells"]
-    time = ds_2D_trop.sizes["time"]
+    ncells = ds_3D_trop.sizes["ncells"]
+    time = ds_3D_trop.sizes["time"]
 
     # Generate unique pairs of random indices
-    num_samples = int(1e5)
+    num_samples = int(1e6)
     total_indices = ncells * time
     random_indices = da.random.randint(0, total_indices, num_samples).compute()
 
@@ -38,17 +39,18 @@ for run in runs:
     # create xrrays
     random_coords = xr.Dataset(
         {
-            "time": xr.DataArray(ds_2D_trop.time[random_time_idx].values, dims="index"),
+            "time": xr.DataArray(ds_3D_trop.time[random_time_idx].values, dims="index"),
             "ncells": xr.DataArray(
-                ds_2D_trop.ncells[random_ncells_idx].values, dims="index"
+                ds_3D_trop.ncells[random_ncells_idx].values, dims="index"
             ),
         },
         coords={"index": np.arange(num_samples)},
     )
 
     #  save to file
-    random_coords.to_netcdf(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/random_coords.nc"
-    )
+    save_path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/random_coords.nc"
+    if os.path.exists(save_path):
+        os.remove(save_path)
 
-# %%
+    random_coords.to_netcdf(save_path)
+

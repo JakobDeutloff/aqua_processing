@@ -1,85 +1,86 @@
 # %%
 import xarray as xr
 import numpy as np
-from src.grid_helpers import merge_grid
 import matplotlib.pyplot as plt
+from src.grid_helpers import merge_grid
+import pandas as pd
 
 # %% load data
-path = "/work/bm1183/m301049/"
-ds_control = xr.open_mfdataset(
-    path + "icon-mpim/experiments/jed0011/jed0011_atm_2d_19790730T000000Z.14380341.nc",
-    chunks={},
-).pipe(merge_grid)
-ds_4K = xr.open_mfdataset(
-    path
-    + "icon-mpim-4K/experiments/jed0022/jed0022_atm_2d_19790930T000000Z.14795929.nc",
-    chunks={},
-).pipe(merge_grid)
-ds_2K = xr.open_mfdataset(
-    path
-    + "icon-mpim-2K/experiments/jed0033/jed0033_atm_2d_19790930T000000Z.15016798.nc",
-    chunks={},
-).pipe(merge_grid)
-
-
-
-# %%  calculate iwp in tropics
-def get_tropics(ds):
-    return ds.where((ds.clat > -30) & (ds.clat < 30), drop=True)
-
-
-iwp_control = (
-    get_tropics(ds_control["qsvi"])
-    + get_tropics(ds_control["qgvi"])
-    + get_tropics(ds_control["clivi"])
-).load()
-iwp_2K = (
-    get_tropics(ds_2K["qsvi"])
-    + get_tropics(ds_2K["qgvi"])
-    + get_tropics(ds_2K["clivi"])
-).load()
-iwp_4K = (
-    get_tropics(ds_4K["qsvi"])
-    + get_tropics(ds_4K["qgvi"])
-    + get_tropics(ds_4K["clivi"])
-).load()
+runs = ["jed0011", "jed0022", "jed0033"]
+exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
+datasets = {}
+for run in runs:
+    datasets[run] = xr.open_dataset(
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_mil.nc"
+    )
 
 # %% calculate iwp hist
 bins = np.logspace(-6, 1, 70)
-hist_control, _ = np.histogram(iwp_control, bins=bins, density=False)
-hist_control = hist_control / iwp_control["ncells"].size
-hist_2K, _ = np.histogram(iwp_2K, bins=bins, density=False)
-hist_2K = hist_2K / iwp_2K["ncells"].size
-hist_4K, edges = np.histogram(iwp_4K, bins=bins, density=False)
-hist_4K = hist_4K / iwp_4K["ncells"].size
+histograms = {}
+for run in runs:
+    iwp = datasets[run]["clivi"] + datasets[run]["qsvi"] + datasets[run]["qgvi"]
+    histograms[run], edges = np.histogram(iwp, bins=bins, density=False)
+    histograms[run] = histograms[run] / len(iwp)
 
 # %% plot iwp hists
-fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+fig, ax = plt.subplots(1, 1, figsize=(10, 6))
 
-ax.stairs(hist_control, edges, label="control", color='k')
-ax.stairs(hist_2K, edges, label="2K", color='orange')
-ax.stairs(hist_4K, edges, label="4K", color='r')
+for run in runs:
+    ax.stairs(histograms[run], edges, label=exp_name[run])
 
 ax.legend()
 ax.set_xscale("log")
-ax.set_ylabel('P(IWP)')
-ax.set_xlabel('IWP / kg m$^{-2}$')
-ax.spines[['top', 'right']].set_visible(False)
-fig.savefig('iwp_hist.png', dpi=300)
-# %%
-ds_trop = get_tropics(xr.concat([ds_2K, ds_2K_last], 'time'))
+ax.set_ylabel("P(IWP)")
+ax.set_xlabel("IWP / kg m$^{-2}$")
+ax.spines[["top", "right"]].set_visible(False)
+fig.savefig("plots/iwp_hist_rand.png", dpi=300)
 
 # %%
-ds_mean = ds_trop.mean('ncells')
+ds_2D = xr.open_mfdataset("/work/bm1183/m301049/icon-mpim/experiments/jed0011/jed0011_atm_2d_19*.nc", chunks={}).pipe(merge_grid)
 
-# %% plot time series
-def plot_var(varname, ax):
-    ds_mean[varname].plot(ax=ax)
+# %% plot iwp distribution in tropics for one day
+day = ds_2D.time.sel(time='1979-07-29')
+ds_2D_day = ds_2D.sel(time=day)[['clivi', 'qsvi', 'qgvi']].where((ds_2D.clat < 30) & (ds_2D.clat > -30), drop=True)
+iwp_day = (ds_2D_day['clivi'] + ds_2D_day['qsvi'] + ds_2D_day['qgvi']).load()
 
+# %% plot iwp distribution
+fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+cmap = plt.get_cmap('viridis')
+norm = plt.Normalize(vmin=0, vmax=24)
+for time in day:
+    hist, edges = np.histogram(iwp_day.sel(time=time), bins=bins, density=False)
+    hist = hist / len(iwp_day.sel(time=time))
+    color = cmap(norm(time.dt.hour.values))
+    ax.stairs(hist, edges, color=color)
 
-fig, axes = plt.subplots(8, 4, figsize=(30, 30), sharex='col')
+ax.set_xscale("log")
+fig.colorbar(plt.cm.ScalarMappable(cmap=cmap, norm=norm), ax=ax, label="Time of day")
+ax.spines[["top", "right"]].set_visible(False)
+ax.set_ylabel("P(IWP)")
+ax.set_xlabel("IWP / kg m$^{-2}$")
+fig.savefig("plots/iwp_hist_daily.png", dpi=300)
 
-for i, varname in enumerate(ds_mean.data_vars):
-    plot_var(varname, axes.flat[i])
+# %% plot iwp distribution for all days at one time 
+times = pd.date_range(start='1979-07-01 12:00', end='1979-07-29 12:00', freq='D')
+ds_2D_tod = ds_2D.sel(time=times).where((ds_2D.clat < 30) & (ds_2D.clat > -30), drop=True)
+iwp_tod = (ds_2D_tod['clivi'] + ds_2D_tod['qsvi'] + ds_2D_tod['qgvi']).load()
+
+# %% plot iwp distribution
+fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+cmap = plt.get_cmap('viridis')
+norm = plt.Normalize(vmin=1, vmax=29)
+for time in times:
+    hist, edges = np.histogram(iwp_tod.sel(time=time), bins=bins, density=False)
+    hist = hist / len(iwp_tod.sel(time=time))
+    color = cmap(norm(time.day))
+    ax.stairs(hist, edges, color=color)
+
+ax.set_xscale("log")
+fig.colorbar(plt.cm.ScalarMappable(cmap=cmap, norm=norm), ax=ax, label="Day of month")
+ax.spines[["top", "right"]].set_visible(False)
+ax.set_ylabel("P(IWP)")
+ax.set_xlabel("IWP / kg m$^{-2}$")
+fig.savefig("plots/iwp_hist_month.png", dpi=300)
+
 
 # %%
