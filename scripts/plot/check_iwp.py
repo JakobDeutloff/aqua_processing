@@ -9,17 +9,27 @@ import pandas as pd
 # %% load data
 runs = ["jed0011", "jed0022", "jed0033"]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
+dir_name = {"jed0011": "icon-mpim", "jed0022": "icon-mpim-4K", "jed0033": "icon-mpim-2K"}
+datasets_full = {}
 datasets = {}
+
 for run in runs:
-    datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_mil.nc"
+    ds = xr.open_mfdataset(
+        f"/work/bm1183/m301049/{dir_name[run]}/experiments/{run}/{run}_atm_2d_19*.nc", chunks={"time":-1, "ncells":-1}
+    ).pipe(merge_grid)
+    datasets[run] = ds.where((ds.clat < 30) & (ds.clat > -30), drop=True)
+
+# %%
+for run in runs:
+    datasets[run] = xr.open_mfdataset(
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_atm_2d_19*.nc"
     )
 
 # %% read cloudsat
 cloudsat = read_cloudsat("2009")
 
 # %% calculate iwp hist
-bins = np.logspace(-6, 1, 70)
+bins = np.logspace(-4, np.log10(40), 70)
 histograms = {}
 for run in runs:
     iwp = datasets[run]["clivi"] + datasets[run]["qsvi"] + datasets[run]["qgvi"]
@@ -42,6 +52,20 @@ ax.set_ylabel("P(IWP)")
 ax.set_xlabel("IWP / kg m$^{-2}$")
 ax.spines[["top", "right"]].set_visible(False)
 fig.savefig("plots/iwp_hist_rand.png", dpi=300)
+
+# %% plot diff to control 
+fig, ax = plt.subplots(1, 1, figsize=(8, 5))
+ax.axhline(0, color="grey", linestyle="--", linewidth=0.8)
+for run in ["jed0022", "jed0033"]:
+    diff = histograms[run] - histograms["jed0011"]
+    ax.stairs(diff, edges, label=exp_name[run], color=colors[run])
+
+ax.legend()
+ax.set_xscale("log")
+ax.set_ylabel("P(IWP)")
+ax.set_xlabel("IWP / kg m$^{-2}$")
+ax.spines[["top", "right"]].set_visible(False)
+fig.savefig("plots/iwp_hist_rand_diff.png", dpi=300)
 
 # %%
 ds_2D = xr.open_mfdataset("/work/bm1183/m301049/icon-mpim/experiments/jed0011/jed0011_atm_2d_19*.nc", chunks={}).pipe(merge_grid)

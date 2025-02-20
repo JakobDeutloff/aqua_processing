@@ -5,7 +5,7 @@ import numpy as np
 from src.sampling import sample_profiles
 
 # %% naming
-runs = ["jed0011", "jed0022", "jed0033"]
+runs = ["jed0011"]
 model_config = {
     "jed0011": "icon-mpim",
     "jed0022": "icon-mpim-4K",

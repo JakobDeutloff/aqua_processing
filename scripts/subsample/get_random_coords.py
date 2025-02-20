@@ -29,7 +29,7 @@ for run in runs:
     time = ds_3D_trop.sizes["time"]
 
     # Generate unique pairs of random indices
-    num_samples = int(1e6)
+    num_samples = int(1e7)
     total_indices = ncells * time
     random_indices = da.random.randint(0, total_indices, num_samples).compute()
 
@@ -54,3 +54,5 @@ for run in runs:
 
     random_coords.to_netcdf(save_path)
 
+
+# %%

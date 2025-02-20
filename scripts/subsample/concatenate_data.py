@@ -3,7 +3,7 @@ import xarray as xr
 import os
 
 # %% set names
-runs = ["jed0011", "jed0022", "jed0033"]
+runs = ["jed0011"]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 filenames = [
     "atm_2d_19",
@@ -30,7 +30,7 @@ for run in runs:
             )
             .drop_duplicates("index")
             .sortby("index")
-        )
+        ).load()
         # check for missing indices
         missing_idx = rand_coords.index.values[
             ~rand_coords.index.isin(datasets[file].index.values)

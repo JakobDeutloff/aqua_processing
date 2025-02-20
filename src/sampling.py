@@ -81,9 +81,11 @@ def subsample_file(file, exp_name):
     )
 
 
-def process_bin( i, j, ds, idx, iwp_bins, local_time_bins, n_profiles, cell_3d, time_3d):
+def process_bin(i, j, ds, idx, iwp_bins, local_time_bins, n_profiles, cell_3d, time_3d):
     iwp_mask = (ds.IWP > iwp_bins[i]) & (ds.IWP <= iwp_bins[i + 1])
-    time_mask = (ds.time_local > local_time_bins[j]) & (ds.time_local <= local_time_bins[j + 1])
+    time_mask = (ds.time_local > local_time_bins[j]) & (
+        ds.time_local <= local_time_bins[j + 1]
+    )
     mask = iwp_mask & time_mask
     flat_mask = mask.values.flatten()
     idx_true = idx[flat_mask]
@@ -94,7 +96,16 @@ def process_bin( i, j, ds, idx, iwp_bins, local_time_bins, n_profiles, cell_3d, 
     times = time_3d[member_mask]
     return i, j, cells, times
 
-def sample_profiles(ds, local_time_bins, local_time_points, iwp_bins, iwp_points, n_profiles, coordinates):
+
+def sample_profiles(
+    ds,
+    local_time_bins,
+    local_time_points,
+    iwp_bins,
+    iwp_points,
+    n_profiles,
+    coordinates,
+):
     """
     Samples profiles from the dataset based on the given bins and points.
 
@@ -118,26 +129,50 @@ def sample_profiles(ds, local_time_bins, local_time_points, iwp_bins, iwp_points
     cell_3d = cell_3d.flatten()
     time_3d = time_3d.flatten()
 
-    kwargs = {
-        "ds": ds,
-        "idx": idx,
-        "iwp_bins": iwp_bins,
-        "local_time_bins": local_time_bins,
-        "n_profiles": n_profiles,
-        "cell_3d": cell_3d,
-        "time_3d": time_3d,
-    }
+    # Create masks for IWP and local time bins
+    iwp_masks = [
+        (ds.IWP > iwp_bins[i]) & (ds.IWP <= iwp_bins[i + 1])
+        for i in range(len(iwp_points))
+    ]
+    time_masks = [
+        (ds.time_local > local_time_bins[j]) & (ds.time_local <= local_time_bins[j + 1])
+        for j in range(len(local_time_points))
+    ]
 
-    with ProcessPoolExecutor() as executor:
-        futures = [executor.submit(process_bin, i, j, **kwargs) for i in range(len(iwp_points)) for j in range(len(local_time_points))]
-        for future in tqdm(as_completed(futures), total=len(futures)):
-            i, j, cells, times = future.result()
-            coordinates.loc[{"ciwp": iwp_points[i], "ctime": local_time_points[j]}]["ncells"][:]= cells
-            coordinates.loc[{"ciwp": iwp_points[i], "ctime": local_time_points[j]}]["time"][:]= times
+    for i, iwp_mask in tqdm(enumerate(iwp_masks)):
+        for j, time_mask in enumerate(time_masks):
+            mask = iwp_mask & time_mask
+            flat_mask = mask.values.flatten()
+            idx_true = idx[flat_mask]
+            if len(idx_true) >= n_profiles:
+                member_idx = np.random.choice(idx_true, n_profiles, replace=False)
+                member_mask = np.zeros(len(idx), dtype=bool)
+                member_mask[member_idx] = True
+                cells = cell_3d[member_mask]
+                times = time_3d[member_mask]
+                coordinates.loc[{"ciwp": iwp_points[i], "ctime": local_time_points[j]}][
+                    "ncells"
+                ][:] = cells
+                coordinates.loc[{"ciwp": iwp_points[i], "ctime": local_time_points[j]}][
+                    "time"
+                ][:] = times
+            else:
+                print(
+                    f"Warning: Not enough profiles for iwp_bin {i} and time_bin {j}. Skipping."
+                )
 
     return coordinates
 
-def sample_profiles_old(ds, local_time_bins, local_time_points, iwp_bins, iwp_points, n_profiles, coordinates):
+
+def sample_profiles_old(
+    ds,
+    local_time_bins,
+    local_time_points,
+    iwp_bins,
+    iwp_points,
+    n_profiles,
+    coordinates,
+):
     """
     Samples profiles from the dataset based on the given bins and points.
 
@@ -164,7 +199,9 @@ def sample_profiles_old(ds, local_time_bins, local_time_points, iwp_bins, iwp_po
     for i in tqdm(range(len(iwp_points))):
         iwp_mask = (ds.IWP > iwp_bins[i]) & (ds.IWP <= iwp_bins[i + 1])
         for j in range(len(local_time_points)):
-            time_mask = (ds.time_local > local_time_bins[j]) & (ds.time_local <= local_time_bins[j + 1])
+            time_mask = (ds.time_local > local_time_bins[j]) & (
+                ds.time_local <= local_time_bins[j + 1]
+            )
             mask = iwp_mask & time_mask
             # select n_profiles random true members from mask and set the rest to false
             flat_mask = mask.values.flatten()
@@ -174,11 +211,11 @@ def sample_profiles_old(ds, local_time_bins, local_time_points, iwp_bins, iwp_po
             member_mask[member_idx] = True
             cells = cell_3d[member_mask]
             times = time_3d[member_mask]
-            coordinates.loc[{"ciwp": iwp_points[i], "ctime": local_time_points[j]}]["ncells"][
-                :
-            ] = cells
-            coordinates.loc[{"ciwp": iwp_points[i], "ctime": local_time_points[j]}]["time"][
-                :
-            ] = times
+            coordinates.loc[{"ciwp": iwp_points[i], "ctime": local_time_points[j]}][
+                "ncells"
+            ][:] = cells
+            coordinates.loc[{"ciwp": iwp_points[i], "ctime": local_time_points[j]}][
+                "time"
+            ][:] = times
 
     return coordinates
