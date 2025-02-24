@@ -3,10 +3,11 @@ import pandas as pd
 from dask.diagnostics import ProgressBar
 import glob
 import os
-from src.grid_helpers import merge_grid
+from src.grid_helpers import merge_grid, fix_time
 import numpy as np
 from tqdm import tqdm
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from dask.distributed import Client
+import dask.array as da
 
 
 def get_coarse_time(first, last, path):
@@ -47,38 +48,85 @@ def coarsen_ds(ds_list, time):
             os.rename(file[:-3] + "_coarse.nc", file)
 
 
-def subsample_file(file, exp_name):
+def subsample_file(files, exp_name, number):
     """
     Get random sample of data from file
     """
-
-    ds = xr.open_dataset(
-        file,
-        chunks={},
-    ).pipe(merge_grid)
-    random_coords = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/random_coords.nc"
+    ds = (
+        xr.open_mfdataset(
+            files,
+            chunks="auto" ,
+        )
+        .pipe(merge_grid)
+        .pipe(fix_time)
     )
-
-    # get overlap
-    valid_time_mask = random_coords.time.isin(ds.time)
-    valid_coords = random_coords.where(valid_time_mask, drop=True)
+    random_coords = xr.open_dataset(
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/random_coords{number}.nc"
+    )
+    # coarsen to 6h timestep
+    time_coarse = pd.date_range(start=ds.time.values[0], end=ds.time.values[-1], freq='6h')
+    ds = ds.sel(time=time_coarse)
 
     # select data
+    print("Selecting data")
     ds_random = ds.sel(
-        ncells=valid_coords.ncells.astype(int), time=valid_coords.time
+        ncells=random_coords.ncells.astype(int), time=random_coords.time
     ).assign_coords(
-        time=valid_coords.time,
-        ncells=valid_coords.ncells,
-        clat=ds.clat.sel(ncells=valid_coords.ncells),
-        clon=ds.clon.sel(ncells=valid_coords.ncells),
+        time=random_coords.time,
+        ncells=random_coords.ncells,
+        clat=ds.clat.sel(ncells=random_coords.ncells),
+        clon=ds.clon.sel(ncells=random_coords.ncells),
     )
 
     # save in random sample folder
-    filename = file.split("/")[-1]
-    ds_random.to_netcdf(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/{filename}"
+    filename = files.split("/")[-1]
+    print("Saving data")
+    with ProgressBar():
+        ds_random.to_netcdf(
+            f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/{filename[:-2]}_rand{number}.nc"
+        )
+
+def get_random_coords(run, model_config, exp_name, number=0):
+
+    path = f"/work/bm1183/m301049/{model_config}/experiments/{run}/"
+    ds_3D = (
+        xr.open_mfdataset(f"{path}{run}_atm_3d_main_19*.nc", chunks={})
+        .pipe(merge_grid)
+        .pipe(fix_time)
     )
+
+    # select tropics
+    ds_3D_trop = ds_3D.where((ds_3D.clat < 30) & (ds_3D.clat > -30), drop=True)
+
+    # get random coordinates across time and ncells
+    ncells = ds_3D_trop.sizes["ncells"]
+    time = ds_3D_trop.sizes["time"]
+
+    # Generate unique pairs of random indices
+    num_samples = int(1e7)
+    total_indices = ncells * time
+    random_indices = da.random.randint(0, total_indices, num_samples).compute()
+
+    random_ncells_idx = random_indices % ncells
+    random_time_idx = random_indices // ncells
+
+    # create xrrays
+    random_coords = xr.Dataset(
+        {
+            "time": xr.DataArray(ds_3D_trop.time[random_time_idx].values, dims="index"),
+            "ncells": xr.DataArray(
+                ds_3D_trop.ncells[random_ncells_idx].values, dims="index"
+            ),
+        },
+        coords={"index": np.arange(num_samples)},
+    )
+
+    #  save to file
+    save_path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/random_coords{number}.nc"
+    if os.path.exists(save_path):
+        os.remove(save_path)
+
+    random_coords.to_netcdf(save_path)
 
 
 def process_bin(i, j, ds, idx, iwp_bins, local_time_bins, n_profiles, cell_3d, time_3d):

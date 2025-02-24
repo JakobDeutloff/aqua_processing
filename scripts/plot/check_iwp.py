@@ -7,22 +7,22 @@ from src.read_data import read_cloudsat
 import pandas as pd
 
 # %% load data
-runs = ["jed0011", "jed0022", "jed0033"]
+runs = ["jed0011"]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 dir_name = {"jed0011": "icon-mpim", "jed0022": "icon-mpim-4K", "jed0033": "icon-mpim-2K"}
 datasets_full = {}
 datasets = {}
-
+# %%
 for run in runs:
-    ds = xr.open_mfdataset(
-        f"/work/bm1183/m301049/{dir_name[run]}/experiments/{run}/{run}_atm_2d_19*.nc", chunks={"time":-1, "ncells":-1}
+    ds = xr.open_dataset(
+        f"/work/bm1183/m301049/{dir_name[run]}/experiments/{run}/{run}_atm_2d*.nc", chunks={"time":-1, "ncells":-1}
     ).pipe(merge_grid)
     datasets[run] = ds.where((ds.clat < 30) & (ds.clat > -30), drop=True)
 
 # %%
 for run in runs:
     datasets[run] = xr.open_mfdataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_atm_2d_19*.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_atm_2d_19*.nc", combine='nested', concat_dim='index'
     )
 
 # %% read cloudsat

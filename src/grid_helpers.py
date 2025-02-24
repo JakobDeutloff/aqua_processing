@@ -70,3 +70,6 @@ def to_healpix(ds, save_path=None):
             ds_remap.to_netcdf(save_path)
     else:
         return ds_remap
+
+def fix_time(ds):
+    return ds.assign(time=ds.time.values.astype('datetime64[m]'))
