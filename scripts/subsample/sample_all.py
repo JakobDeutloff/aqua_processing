@@ -1,4 +1,6 @@
-from src.sampling import subsample_file, get_random_coords
+# %%
+from src.sampling import subsample_file
+import os
 import sys
 
 # %% specify run and filetype
@@ -11,7 +13,10 @@ model_config = {
 }
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 dir = f"/work/bm1183/m301049/{model_config[run]}/experiments/{run}"
+filelist = [f for f in os.listdir(dir) if f.startswith(f"{run}_{filetype}")]
 
-#%%  sample files
-print(f"subsample files for {run}")
-subsample_file(f"{dir}/{run}_{filetype}", exp_name[run])
+# %%  sample files
+for file in filelist:
+    print(f"subsample {file}")
+    subsample_file(f"{dir}/{file}", exp_name[run])
+# %%

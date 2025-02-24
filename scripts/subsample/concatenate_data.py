@@ -16,11 +16,13 @@ filenames = [
 # %% concatenate single files
 datasets = {}
 for run in runs:
+    print(run)
     path = (
         f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/"
     )
     rand_coords = xr.open_dataset(f"{path}random_coords.nc")
     for file in filenames:
+        print(file)
         # read ds from files
         datasets[file] = (
             xr.open_mfdataset(
@@ -28,20 +30,8 @@ for run in runs:
                 combine="nested",
                 concat_dim=["index"],
             )
-            .drop_duplicates("index")
             .sortby("index")
-        ).load()
-        # check for missing indices
-        missing_idx = rand_coords.index.values[
-            ~rand_coords.index.isin(datasets[file].index.values)
-        ]
-        print(f"Missing indices for {run} {file[:-3]}: {missing_idx}")
-        # save ds as one file
-        if len(missing_idx) == 0:
-            if os.path.exists(f"{path}{run}_{file[:-3]}_randsample_mil.nc"):
-                os.remove(f"{path}{run}_{file[:-3]}_randsample_mil.nc")
-            datasets[file].to_netcdf(f"{path}{run}_{file[:-3]}_randsample_mil.nc")
-            # os.system(f"rm {path}{run}_{file}_19*.nc")
+        )
 
 
 # %% merge 2D and 3D data

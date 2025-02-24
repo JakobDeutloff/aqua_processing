@@ -6,7 +6,7 @@ import os
 from src.grid_helpers import merge_grid, fix_time
 import numpy as np
 from tqdm import tqdm
-from dask.distributed import Client
+import gc
 import dask.array as da
 
 
@@ -48,43 +48,56 @@ def coarsen_ds(ds_list, time):
             os.rename(file[:-3] + "_coarse.nc", file)
 
 
-def subsample_file(files, exp_name, number=0):
+def subsample_file(file, exp_name, number=0):
     """
     Get random sample of data from file
     """
+
     ds = (
-        xr.open_mfdataset(
-            files,
-            chunks="auto" ,
+        xr.open_dataset(
+            file,
+            chunks={"height":-1},
         )
         .pipe(merge_grid)
         .pipe(fix_time)
     )
+
     random_coords = xr.open_dataset(
         f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/random_coords{number}.nc"
-    )
-    # coarsen to 6h timestep
-    time_coarse = pd.date_range(start=ds.time.values[0], end=ds.time.values[-1], freq='6h')
-    ds = ds.sel(time=time_coarse)
+    ).load()
+
+    # get overlap
+    valid_time_mask = random_coords.time.isin(ds.time)
+    valid_coords = random_coords.where(valid_time_mask, drop=True)
 
     # select data
     print("Selecting data")
     ds_random = ds.sel(
-        ncells=random_coords.ncells.astype(int), time=random_coords.time
+        ncells=valid_coords.ncells.astype(int), time=valid_coords.time
     ).assign_coords(
-        time=random_coords.time,
-        ncells=random_coords.ncells,
-        clat=ds.clat.sel(ncells=random_coords.ncells),
-        clon=ds.clon.sel(ncells=random_coords.ncells),
+        time=valid_coords.time,
+        ncells=valid_coords.ncells,
+        clat=ds.clat.sel(ncells=valid_coords.ncells),
+        clon=ds.clon.sel(ncells=valid_coords.ncells),
     )
 
     # save in random sample folder
-    filename = files.split("/")[-1]
     print("Saving data")
+    filename = file.split("/")[-1]
+    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/{filename}"
+    if os.path.exists(path):
+        os.remove(path)
     with ProgressBar():
-        ds_random.to_netcdf(
-            f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/{filename[:-4]}_rand{number}.nc"
-        )
+        ds_random.to_netcdf(path)
+
+    # clear RAM
+    del ds
+    del ds_random
+    del valid_coords
+    del random_coords
+    del valid_time_mask
+    gc.collect()
+
 
 def get_random_coords(run, model_config, exp_name, number=0):
 
