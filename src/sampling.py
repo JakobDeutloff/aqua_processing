@@ -48,7 +48,7 @@ def coarsen_ds(ds_list, time):
             os.rename(file[:-3] + "_coarse.nc", file)
 
 
-def subsample_file(files, exp_name, number):
+def subsample_file(files, exp_name, number=0):
     """
     Get random sample of data from file
     """
@@ -83,7 +83,7 @@ def subsample_file(files, exp_name, number):
     print("Saving data")
     with ProgressBar():
         ds_random.to_netcdf(
-            f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/{filename[:-2]}_rand{number}.nc"
+            f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/{filename[:-4]}_rand{number}.nc"
         )
 
 def get_random_coords(run, model_config, exp_name, number=0):

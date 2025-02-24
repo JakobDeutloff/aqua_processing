@@ -7,4 +7,4 @@ numbers = np.arange(6)
 path = os.getcwd()
 
 for number in numbers:
-    os.system(f'sbatch {path}/scripts/subsample/submitter.sh {number}')
+    os.system(f'sbatch {path}/scripts/subsample/submitter_2d.sh {number}')
