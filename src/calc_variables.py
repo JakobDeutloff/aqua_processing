@@ -81,97 +81,43 @@ def interpolate(ds):
 
 
 def bin_and_average_cre(ds, IWP_bins, time_bins, std=False):
-
+    # Initialize arrays
     dummy = np.zeros([len(IWP_bins) - 1, len(time_bins) - 1])
     cre_arr = {"net": dummy.copy(), "sw": dummy.copy(), "lw": dummy.copy()}
     if std:
         cre_arr_std = {"net": dummy.copy(), "sw": dummy.copy(), "lw": dummy.copy()}
 
-    for i in range(len(IWP_bins) - 1):
-        IWP_mask = (ds["iwp"] > IWP_bins[i]) & (ds["iwp"] < IWP_bins[i + 1])
-        for j in range(len(time_bins) - 1):
-            lon_mask = (ds.time_local > time_bins[j]) & (ds.time_local <= time_bins[j + 1])
+    # Vectorized masks
+    IWP_masks = [(ds["iwp"] > IWP_bins[i]) & (ds["iwp"] < IWP_bins[i + 1]) for i in range(len(IWP_bins) - 1)]
+    time_masks = [(ds.time_local > time_bins[j]) & (ds.time_local <= time_bins[j + 1]) for j in range(len(time_bins) - 1)]
 
-            cre_arr["net"][i, j] = float(
-                (ds["cre_net_hc"].where(IWP_mask & lon_mask)).mean().values
-            )
-            cre_arr["sw"][i, j] = float(
-                (ds["cre_sw_hc"].where(IWP_mask & lon_mask)).mean().values
-            )
-            cre_arr["lw"][i, j] = float(
-                (ds["cre_lw_hc"].where(IWP_mask & lon_mask)).mean().values
-            )
+    # Compute means and standard deviations
+    for i, IWP_mask in enumerate(IWP_masks):
+        for j, time_mask in enumerate(time_masks):
+            combined_mask = IWP_mask & time_mask & ds['mask_height']
+            cre_arr["net"][i, j] = float(ds["cre_net_hc"].where(combined_mask).mean().values)
+            cre_arr["sw"][i, j] = float(ds["cre_sw_hc"].where(combined_mask).mean().values)
+            cre_arr["lw"][i, j] = float(ds["cre_lw_hc"].where(combined_mask).mean().values)
             if std:
-                cre_arr_std["net"][i, j] = float(
-                    (ds["cre_net_hc"].where(IWP_mask & lon_mask)).std().values
-                )
-                cre_arr_std["sw"][i, j] = float(
-                    (ds["cre_sw_hc"].where(IWP_mask & lon_mask)).std().values
-                )
-                cre_arr_std["lw"][i, j] = float(
-                    (ds["cre_lw_hc"].where(IWP_mask & lon_mask)).std().values
-                )
+                cre_arr_std["net"][i, j] = float(ds["cre_net_hc"].where(combined_mask).std().values)
+                cre_arr_std["sw"][i, j] = float(ds["cre_sw_hc"].where(combined_mask).std().values)
+                cre_arr_std["lw"][i, j] = float(ds["cre_lw_hc"].where(combined_mask).std().values)
 
     # Interpolate
-    interp_cre = {
-        "net": cre_arr["net"].copy(),
-        "sw": cre_arr["sw"].copy(),
-        "lw": cre_arr["lw"].copy(),
-    }
+    interp_cre = {key: interpolate(cre_arr[key]) for key in cre_arr.keys()}
 
-    for key in interp_cre.keys():
-        interp_cre[key] = interpolate(cre_arr[key])
-
-    # average over lat
-    interp_cre_average = {}
+    # Average over lat
+    interp_cre_average = {key: np.nanmean(interp_cre[key], axis=1) for key in interp_cre.keys()}
     if std:
-        cre_std_average = {}
-    for key in interp_cre.keys():
-        interp_cre_average[key] = np.nanmean(interp_cre[key], axis=1)
-        if std:
-            cre_std_average[key] = np.nanmean(cre_arr_std[key], axis=1)
+        cre_std_average = {key: np.nanmean(cre_arr_std[key], axis=1) for key in cre_arr_std.keys()}
 
-    # put data into xarrays
-    cre_arr = xr.Dataset(
-        {
-            "net": (("iwp", "time"), cre_arr["net"]),
-            "sw": (("iwp", "time"), cre_arr["sw"]),
-            "lw": (("iwp", "time"), cre_arr["lw"]),
-        },
-        coords={
-            "iwp": (IWP_bins[:-1] + IWP_bins[1:]) / 2,
-            "time": (time_bins[:-1] + time_bins[1:]) / 2,
-        },
-    )
-    interp_cre = xr.Dataset(
-        {
-            "net": (("iwp", "time"), interp_cre["net"]),
-            "sw": (("iwp", "time"), interp_cre["sw"]),
-            "lw": (("iwp", "time"), interp_cre["lw"]),
-        },
-        coords={
-            "iwp": (IWP_bins[:-1] + IWP_bins[1:]) / 2,
-            "time": (time_bins[:-1] + time_bins[1:]) / 2,
-        },
-    )
-    interp_cre_average = xr.Dataset(
-        {
-            "net": ("iwp", interp_cre_average["net"]),
-            "sw": ("iwp", interp_cre_average["sw"]),
-            "lw": ("iwp", interp_cre_average["lw"]),
-        },
-        coords={"iwp": (IWP_bins[:-1] + IWP_bins[1:]) / 2},
-    )
+    # Put data into xarrays
+    coords = {"iwp": (IWP_bins[:-1] + IWP_bins[1:]) / 2, "time": (time_bins[:-1] + time_bins[1:]) / 2}
+    cre_arr = xr.Dataset({key: (("iwp", "time"), cre_arr[key]) for key in cre_arr.keys()}, coords=coords)
+    interp_cre = xr.Dataset({key: (("iwp", "time"), interp_cre[key]) for key in interp_cre.keys()}, coords=coords)
+    interp_cre_average = xr.Dataset({key: ("iwp", interp_cre_average[key]) for key in interp_cre_average.keys()}, coords={"iwp": coords["iwp"]})
     if std:
-        cre_std_average = xr.Dataset(
-            {
-                "net": ("iwp", cre_std_average["net"]),
-                "sw": ("iwp", cre_std_average["sw"]),
-                "lw": ("iwp", cre_std_average["lw"]),
-            },
-            coords={"iwp": (IWP_bins[:-1] + IWP_bins[1:]) / 2},
-        )
-
+        cre_std_average = xr.Dataset({key: ("iwp", cre_std_average[key]) for key in cre_std_average.keys()}, coords={"iwp": coords["iwp"]})
         return cre_arr, interp_cre, interp_cre_average, cre_std_average
     else:
         return cre_arr, interp_cre, interp_cre_average
