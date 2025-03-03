@@ -40,11 +40,11 @@ for run in runs:
 # %% calculate cloud top
 for run in runs:
     datasets[run]["hc_top_temperature"], datasets[run]["hc_top_pressure"] = (
-        calculate_hc_temperature(datasets[run], IWP_emission=8.17e-3)
+        calculate_hc_temperature(datasets[run], IWP_emission=8.73e-3)
     )
 # %% calculate masks
 for run in runs:
-    datasets[run]["mask_height"] = datasets[run]["hc_top_pressure"] < 350
+    datasets[run]["mask_height"] = datasets[run]["hc_top_temperature"] < (273.15 - 35)
     datasets[run]["mask_hc_no_lc"] = (datasets[run]["iwp"] > 1e-5) & (
         datasets[run]["lwp"] < 1e-4
     )

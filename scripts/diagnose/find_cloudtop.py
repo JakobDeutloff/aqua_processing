@@ -26,7 +26,7 @@ flux = atms["rlut"]
 T_bright = calc_brightness_temp(flux)
 T_bright = T_bright.where(mask, 500)
 
-#%% tropopause pressure
+# tropopause pressure
 height_trop_ixd = atms["ta"].argmin("height")
 p_trop = atms["phalf"].isel(height=height_trop_ixd)
 
@@ -40,3 +40,11 @@ T_bright = T_bright.where(mask)
 mean_ice_cumsum = ice_cumsum.median()
 print(mean_ice_cumsum.values)
 
+# %% plot difference between p_bright and p_trop
+fig, ax = plt.subplots()
+
+diff = p_bright - p_trop
+diff.groupby_bins(datasets['jed0011']['iwp'].where(mask), bins=np.logspace(-1, np.log10(40), 51)).mean().plot(ax=ax)
+ax.set_xscale('log')
+
+# %%

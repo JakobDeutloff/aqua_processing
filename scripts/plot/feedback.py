@@ -112,13 +112,17 @@ for run in runs:
     histograms[run], edges = np.histogram(iwp, bins=iwp_bins, density=False)
     histograms[run] = histograms[run] / len(iwp)
 
-histograms["cloudsat"], _ = np.histogram(cloudsat["ice_water_path"]/1e3, bins=iwp_bins, density=False)
+histograms["cloudsat"], _ = np.histogram(
+    cloudsat["ice_water_path"] / 1e3, bins=iwp_bins, density=False
+)
 histograms["cloudsat"] = histograms["cloudsat"] / len(cloudsat)
 
 # %% plot iwp hists
 fig, ax = plt.subplots(1, 1, figsize=(8, 5))
 colors = {"jed0011": "k", "jed0022": "red", "jed0033": "orange"}
-ax.stairs(histograms["cloudsat"], edges, label="CloudSat", color="k", linewidth=4, alpha=0.5)
+ax.stairs(
+    histograms["cloudsat"], edges, label="CloudSat", color="k", linewidth=4, alpha=0.5
+)
 for run in runs:
     ax.stairs(histograms[run], edges, label=exp_name[run], color=colors[run])
 
@@ -130,7 +134,7 @@ ax.set_xlim([1e-4, 40])
 ax.spines[["top", "right"]].set_visible(False)
 fig.savefig("plots/iwp_hist_rand.png", dpi=300, bbox_inches="tight")
 
-# %% plot diff to control 
+# %% plot diff to control
 fig, ax = plt.subplots(1, 1, figsize=(8, 5))
 ax.axhline(0, color="grey", linestyle="--", linewidth=0.8)
 for run in ["jed0022", "jed0033"]:
@@ -190,11 +194,11 @@ fig.legend(
 ax.spines[["top", "right"]].set_visible(False)
 ax.set_xlabel("$I$  / kg m$^{-2}$")
 ax.set_ylabel("$C(I) \cdot P(I)$  / W m$^{-2}$")
-ax.set_xscale('log')
+ax.set_xscale("log")
 ax.set_xlim([1e-4, 40])
 fig.savefig("plots/cre_iwp_folded.png", dpi=300, bbox_inches="tight")
 
-# %% calculate integrated CRE and feedback 
+# %% calculate integrated CRE and feedback
 cre_integrated = {}
 cre_const_iwp_integrated = {}
 cre_const_cre_integrated = {}
@@ -208,58 +212,108 @@ for run in runs:
     cre_const_cre_integrated[run] = const_cre_folded[run].sum(dim="iwp")
 
 
-feedback['jed0033'] = (cre_integrated['jed0033'] - cre_integrated["jed0011"]) / 2
-feedback['jed0022'] = (cre_integrated['jed0022'] - cre_integrated["jed0011"]) / 4
-feedback_const_iwp['jed0033'] = (cre_const_iwp_integrated['jed0033'] - cre_const_iwp_integrated["jed0011"]) / 2
-feedback_const_iwp['jed0022'] = (cre_const_iwp_integrated['jed0022'] - cre_const_iwp_integrated["jed0011"]) / 4
-feedback_const_cre['jed0033'] = (cre_const_cre_integrated['jed0033'] - cre_const_cre_integrated["jed0011"]) / 2
-feedback_const_cre['jed0022'] = (cre_const_cre_integrated['jed0022'] - cre_const_cre_integrated["jed0011"]) / 4
+feedback["jed0033"] = (cre_integrated["jed0033"] - cre_integrated["jed0011"]) / 2
+feedback["jed0022"] = (cre_integrated["jed0022"] - cre_integrated["jed0011"]) / 4
+feedback_const_iwp["jed0033"] = (
+    cre_const_iwp_integrated["jed0033"] - cre_const_iwp_integrated["jed0011"]
+) / 2
+feedback_const_iwp["jed0022"] = (
+    cre_const_iwp_integrated["jed0022"] - cre_const_iwp_integrated["jed0011"]
+) / 4
+feedback_const_cre["jed0033"] = (
+    cre_const_cre_integrated["jed0033"] - cre_const_cre_integrated["jed0011"]
+) / 2
+feedback_const_cre["jed0022"] = (
+    cre_const_cre_integrated["jed0022"] - cre_const_cre_integrated["jed0011"]
+) / 4
 
-# %% plot integrated CRE and feedback 
+# %% plot integrated CRE and feedback
 fig, axes = plt.subplots(1, 3, figsize=(9, 4), sharex=True, sharey=True)
 
 
-axes[0].scatter(0, feedback["jed0033"]['lw'].values, color='red', marker='x')
-axes[0].scatter(1, feedback["jed0033"]['sw'].values, color='blue', marker='x')
-axes[0].scatter(2, feedback["jed0033"]['net'].values, color='k', marker='x')
+axes[0].scatter(0, feedback["jed0033"]["lw"].values, color="red", marker="x")
+axes[0].scatter(1, feedback["jed0033"]["sw"].values, color="blue", marker="x")
+axes[0].scatter(2, feedback["jed0033"]["net"].values, color="k", marker="x")
 
-axes[0].scatter(0, feedback["jed0022"]['lw'].values, color='red', marker='o', facecolors='none')
-axes[0].scatter(1, feedback["jed0022"]['sw'].values, color='blue', marker='o', facecolors='none')
-axes[0].scatter(2, feedback["jed0022"]['net'].values, color='k', marker='o', facecolors='none')
+axes[0].scatter(
+    0, feedback["jed0022"]["lw"].values, color="red", marker="o", facecolors="none"
+)
+axes[0].scatter(
+    1, feedback["jed0022"]["sw"].values, color="blue", marker="o", facecolors="none"
+)
+axes[0].scatter(
+    2, feedback["jed0022"]["net"].values, color="k", marker="o", facecolors="none"
+)
 axes[0].set_title("Total")
 
-axes[1].scatter(0, feedback_const_iwp["jed0033"]['lw'].values, color='red', marker='x')
-axes[1].scatter(1, feedback_const_iwp["jed0033"]['sw'].values, color='blue', marker='x')
-axes[1].scatter(2, feedback_const_iwp["jed0033"]['net'].values, color='k', marker='x')
+axes[1].scatter(0, feedback_const_iwp["jed0033"]["lw"].values, color="red", marker="x")
+axes[1].scatter(1, feedback_const_iwp["jed0033"]["sw"].values, color="blue", marker="x")
+axes[1].scatter(2, feedback_const_iwp["jed0033"]["net"].values, color="k", marker="x")
 
-axes[1].scatter(0, feedback_const_iwp["jed0022"]['lw'].values, color='red', marker='o', facecolors='none')
-axes[1].scatter(1, feedback_const_iwp["jed0022"]['sw'].values, color='blue', marker='o', facecolors='none')
-axes[1].scatter(2, feedback_const_iwp["jed0022"]['net'].values, color='k', marker='o', facecolors='none')
+axes[1].scatter(
+    0,
+    feedback_const_iwp["jed0022"]["lw"].values,
+    color="red",
+    marker="o",
+    facecolors="none",
+)
+axes[1].scatter(
+    1,
+    feedback_const_iwp["jed0022"]["sw"].values,
+    color="blue",
+    marker="o",
+    facecolors="none",
+)
+axes[1].scatter(
+    2,
+    feedback_const_iwp["jed0022"]["net"].values,
+    color="k",
+    marker="o",
+    facecolors="none",
+)
 axes[1].set_title("CRE Change")
 
-axes[2].scatter(0, feedback_const_cre["jed0033"]['lw'].values, color='red', marker='x')
-axes[2].scatter(1, feedback_const_cre["jed0033"]['sw'].values, color='blue', marker='x')
-axes[2].scatter(2, feedback_const_cre["jed0033"]['net'].values, color='k', marker='x')
+axes[2].scatter(0, feedback_const_cre["jed0033"]["lw"].values, color="red", marker="x")
+axes[2].scatter(1, feedback_const_cre["jed0033"]["sw"].values, color="blue", marker="x")
+axes[2].scatter(2, feedback_const_cre["jed0033"]["net"].values, color="k", marker="x")
 
-axes[2].scatter(0, feedback_const_cre["jed0022"]['lw'].values, color='red', marker='o', facecolors='none')
-axes[2].scatter(1, feedback_const_cre["jed0022"]['sw'].values, color='blue', marker='o', facecolors='none')
-axes[2].scatter(2, feedback_const_cre["jed0022"]['net'].values, color='k', marker='o', facecolors='none')
+axes[2].scatter(
+    0,
+    feedback_const_cre["jed0022"]["lw"].values,
+    color="red",
+    marker="o",
+    facecolors="none",
+)
+axes[2].scatter(
+    1,
+    feedback_const_cre["jed0022"]["sw"].values,
+    color="blue",
+    marker="o",
+    facecolors="none",
+)
+axes[2].scatter(
+    2,
+    feedback_const_cre["jed0022"]["net"].values,
+    color="k",
+    marker="o",
+    facecolors="none",
+)
 axes[2].set_title("IWP Change")
 
 for ax in axes:
     ax.set_xticks([0, 1, 2])
     ax.set_yticks([-0.5, 0, 0.5, 1])
-    ax.set_xticklabels(['LW', 'SW', 'Net'])
+    ax.set_xticklabels(["LW", "SW", "Net"])
     ax.spines[["top", "right"]].set_visible(False)
     ax.axhline(0, color="grey", linestyle="--", linewidth=0.8)
 
 
-axes[0].set_ylabel('Feedback / W m$^{-2}$ K$^{-1}$')
+axes[0].set_ylabel("Feedback / W m$^{-2}$ K$^{-1}$")
 
 labels = ["+2K", "+4K"]
 handles = [
-    plt.Line2D([0], [0], color="grey", marker='x', linestyle="none"),
-    plt.Line2D([0], [0], color="grey", marker='o', linestyle='none'),
+    plt.Line2D([0], [0], color="grey", marker="x", linestyle="none"),
+    plt.Line2D([0], [0], color="grey", marker="o", linestyle="none"),
 ]
 fig.legend(handles, labels, bbox_to_anchor=[0.62, 0], frameon=True, ncols=2)
 fig.savefig("plots/feedback.png", dpi=300, bbox_inches="tight")
@@ -267,15 +321,27 @@ fig.savefig("plots/feedback.png", dpi=300, bbox_inches="tight")
 
 # %% investigate low cloud fraction
 fig, ax = plt.subplots()
-datasets["jed0011"]["mask_low_cloud"].groupby_bins(
-    datasets["jed0011"]["iwp"], iwp_bins
-).mean().plot(ax=ax, label="control", color="k")
-datasets["jed0033"]["mask_low_cloud"].groupby_bins(
-    datasets["jed0033"]["iwp"], iwp_bins
-).mean().plot(ax=ax, label="+2K", color="orange")
-datasets["jed0022"]["mask_low_cloud"].groupby_bins(
-    datasets["jed0022"]["iwp"], iwp_bins
-).mean().plot(ax=ax, label="+4K", color="red")
+datasets["jed0011"]["mask_low_cloud"].where(
+    datasets["jed0011"]["mask_height"]
+).groupby_bins(
+    datasets["jed0011"]["iwp"].where(datasets["jed0011"]["mask_height"]), iwp_bins
+).mean().plot(
+    ax=ax, label="control", color="k"
+)
+datasets["jed0033"]["mask_low_cloud"].where(
+    datasets["jed0033"]["mask_height"]
+).groupby_bins(
+    datasets["jed0033"]["iwp"].where(datasets["jed0033"]["mask_height"]), iwp_bins
+).mean().plot(
+    ax=ax, label="+2K", color="orange"
+)
+datasets["jed0022"]["mask_low_cloud"].where(
+    datasets["jed0022"]["mask_height"]
+).groupby_bins(
+    datasets["jed0022"]["iwp"].where(datasets["jed0022"]["mask_height"]), iwp_bins
+).mean().plot(
+    ax=ax, label="+4K", color="red"
+)
 
 ax.spines[["top", "right"]].set_visible(False)
 ax.set_xlabel("$I$  / kg m$^{-2}$")
@@ -283,30 +349,59 @@ ax.set_ylabel(r"$f_{\mathrm{lc}}(I)$")
 ax.set_xscale("log")
 ax.set_xlim([1e-4, 4e1])
 ax.legend()
-fig.savefig('plots/low_cloud_fraction.png', dpi=300, bbox_inches='tight')
+fig.savefig("plots/low_cloud_fraction.png", dpi=300, bbox_inches="tight")
 
 # %% investigate high cloud temperature and pressure
 fig, axes = plt.subplots(2, 1, figsize=(7, 7), sharex=True)
 
-datasets["jed0011"]["hc_top_temperature"].groupby_bins(
-    datasets["jed0011"]["iwp"], iwp_bins
-).mean().plot(ax=axes[0], label="control", color="k")
-datasets["jed0033"]["hc_top_temperature"].groupby_bins(
-    datasets["jed0033"]["iwp"], iwp_bins
-).mean().plot(ax=axes[0], label="+2K", color="orange")
-datasets["jed0022"]["hc_top_temperature"].groupby_bins(
-    datasets["jed0022"]["iwp"], iwp_bins
-).mean().plot(ax=axes[0], label="+4K", color="red")
+datasets["jed0011"]["hc_top_temperature"].where(
+    datasets["jed0011"]["hc_top_pressure"] < 350
+).groupby_bins(
+    datasets["jed0011"]["iwp"].where(datasets["jed0011"]["hc_top_pressure"] < 350),
+    iwp_bins,
+).mean().plot(
+    ax=axes[0], label="control", color="k"
+)
+datasets["jed0033"]["hc_top_temperature"].where(
+    datasets["jed0033"]["hc_top_pressure"] < 350
+).groupby_bins(
+    datasets["jed0033"]["iwp"].where(datasets["jed0033"]["hc_top_pressure"] < 350),
+    iwp_bins,
+).mean().plot(
+    ax=axes[0], label="+2K", color="orange"
+)
+datasets["jed0022"]["hc_top_temperature"].where(
+    datasets["jed0022"]["hc_top_pressure"] < 350
+).groupby_bins(
+    datasets["jed0022"]["iwp"].where(datasets["jed0022"]["hc_top_pressure"] < 350),
+    iwp_bins,
+).mean().plot(
+    ax=axes[0], label="+4K", color="red"
+)
 
-datasets["jed0011"]["hc_top_pressure"].groupby_bins(
-    datasets["jed0011"]["iwp"], iwp_bins
-).mean().plot(ax=axes[1], label="control", color="k")
-datasets["jed0033"]["hc_top_pressure"].groupby_bins(
-    datasets["jed0033"]["iwp"], iwp_bins
-).mean().plot(ax=axes[1], label="+2K", color="orange")
-datasets["jed0022"]["hc_top_pressure"].groupby_bins(
-    datasets["jed0022"]["iwp"], iwp_bins
-).mean().plot(ax=axes[1], label="+4K", color="red")
+
+datasets["jed0011"]["hc_top_pressure"].where(
+    datasets["jed0011"]["mask_height"]
+).groupby_bins(
+    datasets["jed0011"]["iwp"].where(datasets["jed0011"]["mask_height"]), iwp_bins
+).mean().plot(
+    ax=axes[1], label="control", color="k"
+)
+datasets["jed0033"]["hc_top_pressure"].where(
+    datasets["jed0033"]["mask_height"]
+).groupby_bins(
+    datasets["jed0033"]["iwp"].where(datasets["jed0033"]["mask_height"]), iwp_bins
+).mean().plot(
+    ax=axes[1], label="+2K", color="orange"
+)
+datasets["jed0022"]["hc_top_pressure"].where(
+    datasets["jed0022"]["mask_height"]
+).groupby_bins(
+    datasets["jed0022"]["iwp"].where(datasets["jed0022"]["mask_height"]), iwp_bins
+).mean().plot(
+    ax=axes[1], label="+4K", color="red"
+)
+
 
 for ax in axes:
     ax.spines[["top", "right"]].set_visible(False)
@@ -321,5 +416,32 @@ axes[0].set_xscale("log")
 
 axes[0].legend()
 fig.savefig("plots/hc_top.png", dpi=300, bbox_inches="tight")
+
+# %%
+fig, ax = plt.subplots()
+
+ax.plot(
+    datasets["jed0011"]["ta"].mean("index"),
+    datasets["jed0011"]["phalf"].mean("index") / 100,
+    label="control",
+    color="k",
+)
+ax.invert_yaxis()
+ax.set_ylabel("Pressure / hPa")
+ax.set_xlabel("Temperature / K")
+ax.axvline(273 - 35)
+# %%
+fig, ax = plt.subplots()
+
+ax.scatter(
+    datasets["jed0011"]["hc_top_pressure"],
+    datasets["jed0011"]["hc_top_temperature"],
+    s=0.1,
+    alpha=0.1,
+)
+ax.axhline(273-35, color="grey", linestyle="--")
+ax.axvline(350, color="grey", linestyle="--")
+ax.set_ylabel("Temperature / K")
+ax.set_xlabel("Pressure / hPa")
 
 # %%

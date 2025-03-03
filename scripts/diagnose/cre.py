@@ -5,7 +5,7 @@ import numpy as np
 import os
 
 # %% load data
-runs = ["jed0011", "jed0022", "jed0033"]
+runs = ["jed0011"]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 datasets = {}
 for run in runs:
@@ -66,7 +66,7 @@ cre_arr = {}
 cre_interp = {}
 cre_interp_mean = {}
 cre_interp_std = {}
-iwp_bins = np.logspace(-5, np.log10(40), 51)
+iwp_bins = np.logspace(-4, np.log10(40), 51)
 time_bins = np.linspace(0, 24, 25)
 for run in runs:
     cre_arr[run], cre_interp[run], cre_interp_mean[run] = bin_and_average_cre(

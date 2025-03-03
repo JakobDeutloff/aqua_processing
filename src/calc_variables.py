@@ -90,11 +90,12 @@ def bin_and_average_cre(ds, IWP_bins, time_bins, std=False):
     # Vectorized masks
     IWP_masks = [(ds["iwp"] > IWP_bins[i]) & (ds["iwp"] < IWP_bins[i + 1]) for i in range(len(IWP_bins) - 1)]
     time_masks = [(ds.time_local > time_bins[j]) & (ds.time_local <= time_bins[j + 1]) for j in range(len(time_bins) - 1)]
+    mask_height = ds['hc_top_pressure'] < 350
 
     # Compute means and standard deviations
     for i, IWP_mask in enumerate(IWP_masks):
         for j, time_mask in enumerate(time_masks):
-            combined_mask = IWP_mask & time_mask & ds['mask_height']
+            combined_mask = IWP_mask & time_mask & mask_height
             cre_arr["net"][i, j] = float(ds["cre_net_hc"].where(combined_mask).mean().values)
             cre_arr["sw"][i, j] = float(ds["cre_sw_hc"].where(combined_mask).mean().values)
             cre_arr["lw"][i, j] = float(ds["cre_lw_hc"].where(combined_mask).mean().values)
