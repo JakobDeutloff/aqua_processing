@@ -14,10 +14,19 @@ for run in runs:
         f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
     )
     cre_interp_mean[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand_raw.nc"
     )
 
-
+# %% calculate masks 
+mode = 'raw'
+masks_height = {}
+for run in runs:
+    if mode == 'temperature':
+        masks_height[run] = datasets[run]['hc_top_temperature'] < (273.15 - 35)
+    elif mode == 'pressure':
+        masks_height[run] = datasets[run]['hc_top_pressure'] < 350
+    elif mode == 'raw':
+        masks_height[run] = True
 # %% plot CRE
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.axhline(0, color="grey", linestyle="--", linewidth=0.8)
@@ -56,7 +65,7 @@ ax.spines[["top", "right"]].set_visible(False)
 ax.set_xlabel("$I$  / kg m$^{-2}$")
 ax.set_ylabel("$C(I)$  / W m$^{-2}$")
 ax.set_xscale("log")
-fig.savefig("plots/cre_iwp_4K.png", dpi=300, bbox_inches="tight")
+fig.savefig(f"plots/feedback/{mode}/cre_iwp.png", dpi=300, bbox_inches="tight")
 
 # %% plot CRE diff
 fig, axes = plt.subplots(3, 1, figsize=(7, 7), sharex=True)
@@ -99,16 +108,16 @@ for ax in axes:
 axes[0].set_ylabel(r"$\Delta C_{\mathrm{lw}}(I)$  / W m$^{-2}$")
 axes[1].set_ylabel(r"$\Delta C_{\mathrm{sw}}(I)$  / W m$^{-2}$")
 axes[2].set_ylabel(r"$\Delta C_{\mathrm{net}}(I)$  / W m$^{-2}$")
-fig.savefig("plots/cre_iwp_diff.png", dpi=300, bbox_inches="tight")
+fig.savefig(f"plots/feedback/{mode}/cre_iwp_diff.png", dpi=300, bbox_inches="tight")
 
 # %% read cloudsat
 cloudsat = read_cloudsat("2009")
 
 # %% calculate iwp hist
-iwp_bins = np.logspace(-5, np.log10(40), 51)
+iwp_bins = np.logspace(-4, np.log10(40), 51)
 histograms = {}
 for run in runs:
-    iwp = datasets[run]["clivi"] + datasets[run]["qsvi"] + datasets[run]["qgvi"]
+    iwp = datasets[run]['iwp'].where(masks_height[run])
     histograms[run], edges = np.histogram(iwp, bins=iwp_bins, density=False)
     histograms[run] = histograms[run] / len(iwp)
 
@@ -132,7 +141,7 @@ ax.set_ylabel("P(IWP)")
 ax.set_xlabel("IWP / kg m$^{-2}$")
 ax.set_xlim([1e-4, 40])
 ax.spines[["top", "right"]].set_visible(False)
-fig.savefig("plots/iwp_hist_rand.png", dpi=300, bbox_inches="tight")
+fig.savefig(f"plots/feedback/{mode}/iwp_hist_rand.png", dpi=300, bbox_inches="tight")
 
 # %% plot diff to control
 fig, ax = plt.subplots(1, 1, figsize=(8, 5))
@@ -147,7 +156,7 @@ ax.set_ylabel("P(IWP)")
 ax.set_xlabel("IWP / kg m$^{-2}$")
 ax.set_xlim([1e-4, 40])
 ax.spines[["top", "right"]].set_visible(False)
-fig.savefig("plots/iwp_hist_rand_diff.png", dpi=300, bbox_inches="tight")
+fig.savefig(f"plots/feedback/{mode}/iwp_hist_rand_diff.png", dpi=300, bbox_inches="tight")
 
 # %% multiply CRE and iwp hist
 cre_folded = {}
@@ -196,7 +205,7 @@ ax.set_xlabel("$I$  / kg m$^{-2}$")
 ax.set_ylabel("$C(I) \cdot P(I)$  / W m$^{-2}$")
 ax.set_xscale("log")
 ax.set_xlim([1e-4, 40])
-fig.savefig("plots/cre_iwp_folded.png", dpi=300, bbox_inches="tight")
+fig.savefig(f"plots/feedback/{mode}/cre_iwp_folded.png", dpi=300, bbox_inches="tight")
 
 # %% calculate integrated CRE and feedback
 cre_integrated = {}
@@ -316,132 +325,7 @@ handles = [
     plt.Line2D([0], [0], color="grey", marker="o", linestyle="none"),
 ]
 fig.legend(handles, labels, bbox_to_anchor=[0.62, 0], frameon=True, ncols=2)
-fig.savefig("plots/feedback.png", dpi=300, bbox_inches="tight")
+fig.savefig(f"plots/feedback/{mode}//feedback.png", dpi=300, bbox_inches="tight")
 
-
-# %% investigate low cloud fraction
-fig, ax = plt.subplots()
-datasets["jed0011"]["mask_low_cloud"].where(
-    datasets["jed0011"]["mask_height"]
-).groupby_bins(
-    datasets["jed0011"]["iwp"].where(datasets["jed0011"]["mask_height"]), iwp_bins
-).mean().plot(
-    ax=ax, label="control", color="k"
-)
-datasets["jed0033"]["mask_low_cloud"].where(
-    datasets["jed0033"]["mask_height"]
-).groupby_bins(
-    datasets["jed0033"]["iwp"].where(datasets["jed0033"]["mask_height"]), iwp_bins
-).mean().plot(
-    ax=ax, label="+2K", color="orange"
-)
-datasets["jed0022"]["mask_low_cloud"].where(
-    datasets["jed0022"]["mask_height"]
-).groupby_bins(
-    datasets["jed0022"]["iwp"].where(datasets["jed0022"]["mask_height"]), iwp_bins
-).mean().plot(
-    ax=ax, label="+4K", color="red"
-)
-
-ax.spines[["top", "right"]].set_visible(False)
-ax.set_xlabel("$I$  / kg m$^{-2}$")
-ax.set_ylabel(r"$f_{\mathrm{lc}}(I)$")
-ax.set_xscale("log")
-ax.set_xlim([1e-4, 4e1])
-ax.legend()
-fig.savefig("plots/low_cloud_fraction.png", dpi=300, bbox_inches="tight")
-
-# %% investigate high cloud temperature and pressure
-fig, axes = plt.subplots(2, 1, figsize=(7, 7), sharex=True)
-
-datasets["jed0011"]["hc_top_temperature"].where(
-    datasets["jed0011"]["hc_top_pressure"] < 350
-).groupby_bins(
-    datasets["jed0011"]["iwp"].where(datasets["jed0011"]["hc_top_pressure"] < 350),
-    iwp_bins,
-).mean().plot(
-    ax=axes[0], label="control", color="k"
-)
-datasets["jed0033"]["hc_top_temperature"].where(
-    datasets["jed0033"]["hc_top_pressure"] < 350
-).groupby_bins(
-    datasets["jed0033"]["iwp"].where(datasets["jed0033"]["hc_top_pressure"] < 350),
-    iwp_bins,
-).mean().plot(
-    ax=axes[0], label="+2K", color="orange"
-)
-datasets["jed0022"]["hc_top_temperature"].where(
-    datasets["jed0022"]["hc_top_pressure"] < 350
-).groupby_bins(
-    datasets["jed0022"]["iwp"].where(datasets["jed0022"]["hc_top_pressure"] < 350),
-    iwp_bins,
-).mean().plot(
-    ax=axes[0], label="+4K", color="red"
-)
-
-
-datasets["jed0011"]["hc_top_pressure"].where(
-    datasets["jed0011"]["mask_height"]
-).groupby_bins(
-    datasets["jed0011"]["iwp"].where(datasets["jed0011"]["mask_height"]), iwp_bins
-).mean().plot(
-    ax=axes[1], label="control", color="k"
-)
-datasets["jed0033"]["hc_top_pressure"].where(
-    datasets["jed0033"]["mask_height"]
-).groupby_bins(
-    datasets["jed0033"]["iwp"].where(datasets["jed0033"]["mask_height"]), iwp_bins
-).mean().plot(
-    ax=axes[1], label="+2K", color="orange"
-)
-datasets["jed0022"]["hc_top_pressure"].where(
-    datasets["jed0022"]["mask_height"]
-).groupby_bins(
-    datasets["jed0022"]["iwp"].where(datasets["jed0022"]["mask_height"]), iwp_bins
-).mean().plot(
-    ax=axes[1], label="+4K", color="red"
-)
-
-
-for ax in axes:
-    ax.spines[["top", "right"]].set_visible(False)
-    ax.set_xlim([1e-4, 4e1])
-
-
-axes[0].set_ylabel(r"$T_{\mathrm{hc}}$  / K")
-axes[1].set_ylabel(r"$p_{\mathrm{hc}}$  / hPa")
-axes[1].set_xlabel("$I$  / kg m$^{-2}$")
-axes[0].set_xlabel("")
-axes[0].set_xscale("log")
-
-axes[0].legend()
-fig.savefig("plots/hc_top.png", dpi=300, bbox_inches="tight")
-
-# %%
-fig, ax = plt.subplots()
-
-ax.plot(
-    datasets["jed0011"]["ta"].mean("index"),
-    datasets["jed0011"]["phalf"].mean("index") / 100,
-    label="control",
-    color="k",
-)
-ax.invert_yaxis()
-ax.set_ylabel("Pressure / hPa")
-ax.set_xlabel("Temperature / K")
-ax.axvline(273 - 35)
-# %%
-fig, ax = plt.subplots()
-
-ax.scatter(
-    datasets["jed0011"]["hc_top_pressure"],
-    datasets["jed0011"]["hc_top_temperature"],
-    s=0.1,
-    alpha=0.1,
-)
-ax.axhline(273-35, color="grey", linestyle="--")
-ax.axvline(350, color="grey", linestyle="--")
-ax.set_ylabel("Temperature / K")
-ax.set_xlabel("Pressure / hPa")
 
 # %%

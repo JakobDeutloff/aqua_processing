@@ -5,7 +5,7 @@ import numpy as np
 import os
 
 # %% load data
-runs = ["jed0011"]
+runs = ["jed0011", "jed0022", "jed0033"]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 datasets = {}
 for run in runs:
@@ -76,8 +76,18 @@ for run in runs:
 # %% save processed data
 for run in runs:
     path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/"
-    cre_arr[run].to_netcdf(path + f"cre/{run}_cre_arr_rand.nc")
-    cre_interp[run].to_netcdf(path + f"cre/{run}_cre_interp_rand.nc")
-    cre_interp_mean[run].to_netcdf(path + f"cre/{run}_cre_interp_mean_rand.nc")
+    file = path + f"cre/{run}_cre_arr_rand_raw.nc"
+    if os.path.exists(file):
+        os.remove(file)
+    cre_arr[run].to_netcdf(file)
+    file = path + f"cre/{run}_cre_interp_rand_raw.nc"
+    if os.path.exists(file):
+        os.remove(file)
+    cre_interp[run].to_netcdf(file)
+    file = path + f"cre/{run}_cre_interp_mean_rand_raw.nc"
+    if os.path.exists(file):
+        os.remove(file)
+    cre_interp_mean[run].to_netcdf(file)
+
 
 # %%

@@ -90,7 +90,7 @@ def bin_and_average_cre(ds, IWP_bins, time_bins, std=False):
     # Vectorized masks
     IWP_masks = [(ds["iwp"] > IWP_bins[i]) & (ds["iwp"] < IWP_bins[i + 1]) for i in range(len(IWP_bins) - 1)]
     time_masks = [(ds.time_local > time_bins[j]) & (ds.time_local <= time_bins[j + 1]) for j in range(len(time_bins) - 1)]
-    mask_height = ds['hc_top_pressure'] < 350
+    mask_height = True
 
     # Compute means and standard deviations
     for i, IWP_mask in enumerate(IWP_masks):
