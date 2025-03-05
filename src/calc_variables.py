@@ -80,7 +80,7 @@ def interpolate(ds):
     return copy
 
 
-def bin_and_average_cre(ds, IWP_bins, time_bins, std=False):
+def bin_and_average_cre(ds, IWP_bins, time_bins, mask_height, std=False):
     # Initialize arrays
     dummy = np.zeros([len(IWP_bins) - 1, len(time_bins) - 1])
     cre_arr = {"net": dummy.copy(), "sw": dummy.copy(), "lw": dummy.copy()}
@@ -90,7 +90,6 @@ def bin_and_average_cre(ds, IWP_bins, time_bins, std=False):
     # Vectorized masks
     IWP_masks = [(ds["iwp"] > IWP_bins[i]) & (ds["iwp"] < IWP_bins[i + 1]) for i in range(len(IWP_bins) - 1)]
     time_masks = [(ds.time_local > time_bins[j]) & (ds.time_local <= time_bins[j + 1]) for j in range(len(time_bins) - 1)]
-    mask_height = True
 
     # Compute means and standard deviations
     for i, IWP_mask in enumerate(IWP_masks):

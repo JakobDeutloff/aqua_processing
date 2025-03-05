@@ -14,11 +14,11 @@ for run in runs:
         f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
     )
     cre_interp_mean[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand_raw.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand_p.nc"
     )
 
 # %% calculate masks 
-mode = 'raw'
+mode = 'pressure'
 masks_height = {}
 for run in runs:
     if mode == 'temperature':
@@ -325,7 +325,7 @@ handles = [
     plt.Line2D([0], [0], color="grey", marker="o", linestyle="none"),
 ]
 fig.legend(handles, labels, bbox_to_anchor=[0.62, 0], frameon=True, ncols=2)
-fig.savefig(f"plots/feedback/{mode}//feedback.png", dpi=300, bbox_inches="tight")
+fig.savefig(f"plots/feedback/{mode}/feedback.png", dpi=300, bbox_inches="tight")
 
 
 # %%
