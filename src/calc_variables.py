@@ -276,42 +276,6 @@ def calc_heating_rates(rho, rs, rl, vgrid):
     return hr_arr
 
 
-def calc_stability(ds):
-
-    cp = 1004  # J kg^-1 K^-1 specific heat capacity of dry air at constant pressure
-    R = 287  # J kg^-1 K^-1 gas constant of dry air
-
-    stab = (
-        (ds["ta"] / ds["pfull"]) * (R / cp)
-        - (ds["ta"].diff("height") / ds["pfull"].diff("height"))
-    ) * 1e5
-
-    stab.attrs = {
-        "units": "mK hPa^-1",
-        "long_name": "Stability",
-    }
-
-    return stab
-
-
-def calc_w_sub(ds):
-    wsub = (ds["net_hr"] / ds["stab"]) * 1e3
-    wsub.attrs = {
-        "units": "hPa day^-1",
-        "long_name": "Subsidence velocity",
-    }
-    return -wsub
-
-
-def calc_conv(wsub, pfull):
-    conv = wsub.diff("height") / (pfull.diff("height") / 1e2)
-    conv.attrs = {
-        "units": "day^-1",
-        "long_name": "Convergence",
-    }
-    return conv
-
-
 def calc_cf(ds):
     cf = ((ds["clw"] + ds["qr"] + ds["cli"] + ds["qs"] + ds["qg"]) > 1e-6).astype(int)
     cf.attrs = {
@@ -321,7 +285,7 @@ def calc_cf(ds):
     return cf
 
 
-def calc_stability_jev(ta, vgrid):
+def calc_stability(ta, vgrid):
     g = -9.81
     cp = 1004
     stab = (g / cp) - (ta.diff("height") / vgrid["zg"].diff("height_2").values)
@@ -332,7 +296,7 @@ def calc_stability_jev(ta, vgrid):
     return stab
 
 
-def calc_w_sub_jev(net_hr, stab):
+def calc_w_sub(net_hr, stab):
     wsub = net_hr / stab
     wsub.attrs = {
         "units": "m day^-1",
@@ -341,7 +305,7 @@ def calc_w_sub_jev(net_hr, stab):
     return wsub
 
 
-def calc_conv_jev(wsub, vgrid):
+def calc_conv(wsub, vgrid):
     conv = wsub.diff("height") / (
         vgrid["zghalf"].sel(height=wsub["height"]).diff("height").values
     )
