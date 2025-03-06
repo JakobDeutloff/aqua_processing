@@ -21,7 +21,7 @@ def calculate_hc_temperature(ds, IWP_emission=7.3e-3):
     T_h.attrs = {"units": "K", "long_name": "High Cloud Top Temperature"}
     p_top.attrs = {"units": "hPa", "long_name": "High cloud top pressure"}
 
-    return T_h, p_top/100
+    return T_h, p_top / 100
 
 
 def calc_cre(ds, mode):
@@ -88,36 +88,72 @@ def bin_and_average_cre(ds, IWP_bins, time_bins, mask_height, std=False):
         cre_arr_std = {"net": dummy.copy(), "sw": dummy.copy(), "lw": dummy.copy()}
 
     # Vectorized masks
-    IWP_masks = [(ds["iwp"] > IWP_bins[i]) & (ds["iwp"] < IWP_bins[i + 1]) for i in range(len(IWP_bins) - 1)]
-    time_masks = [(ds.time_local > time_bins[j]) & (ds.time_local <= time_bins[j + 1]) for j in range(len(time_bins) - 1)]
+    IWP_masks = [
+        (ds["iwp"] > IWP_bins[i]) & (ds["iwp"] < IWP_bins[i + 1])
+        for i in range(len(IWP_bins) - 1)
+    ]
+    time_masks = [
+        (ds.time_local > time_bins[j]) & (ds.time_local <= time_bins[j + 1])
+        for j in range(len(time_bins) - 1)
+    ]
 
     # Compute means and standard deviations
     for i, IWP_mask in enumerate(IWP_masks):
         for j, time_mask in enumerate(time_masks):
             combined_mask = IWP_mask & time_mask & mask_height
-            cre_arr["net"][i, j] = float(ds["cre_net_hc"].where(combined_mask).mean().values)
-            cre_arr["sw"][i, j] = float(ds["cre_sw_hc"].where(combined_mask).mean().values)
-            cre_arr["lw"][i, j] = float(ds["cre_lw_hc"].where(combined_mask).mean().values)
+            cre_arr["net"][i, j] = float(
+                ds["cre_net_hc"].where(combined_mask).mean().values
+            )
+            cre_arr["sw"][i, j] = float(
+                ds["cre_sw_hc"].where(combined_mask).mean().values
+            )
+            cre_arr["lw"][i, j] = float(
+                ds["cre_lw_hc"].where(combined_mask).mean().values
+            )
             if std:
-                cre_arr_std["net"][i, j] = float(ds["cre_net_hc"].where(combined_mask).std().values)
-                cre_arr_std["sw"][i, j] = float(ds["cre_sw_hc"].where(combined_mask).std().values)
-                cre_arr_std["lw"][i, j] = float(ds["cre_lw_hc"].where(combined_mask).std().values)
+                cre_arr_std["net"][i, j] = float(
+                    ds["cre_net_hc"].where(combined_mask).std().values
+                )
+                cre_arr_std["sw"][i, j] = float(
+                    ds["cre_sw_hc"].where(combined_mask).std().values
+                )
+                cre_arr_std["lw"][i, j] = float(
+                    ds["cre_lw_hc"].where(combined_mask).std().values
+                )
 
     # Interpolate
     interp_cre = {key: interpolate(cre_arr[key]) for key in cre_arr.keys()}
 
     # Average over lat
-    interp_cre_average = {key: np.nanmean(interp_cre[key], axis=1) for key in interp_cre.keys()}
+    interp_cre_average = {
+        key: np.nanmean(interp_cre[key], axis=1) for key in interp_cre.keys()
+    }
     if std:
-        cre_std_average = {key: np.nanmean(cre_arr_std[key], axis=1) for key in cre_arr_std.keys()}
+        cre_std_average = {
+            key: np.nanmean(cre_arr_std[key], axis=1) for key in cre_arr_std.keys()
+        }
 
     # Put data into xarrays
-    coords = {"iwp": (IWP_bins[:-1] + IWP_bins[1:]) / 2, "time": (time_bins[:-1] + time_bins[1:]) / 2}
-    cre_arr = xr.Dataset({key: (("iwp", "time"), cre_arr[key]) for key in cre_arr.keys()}, coords=coords)
-    interp_cre = xr.Dataset({key: (("iwp", "time"), interp_cre[key]) for key in interp_cre.keys()}, coords=coords)
-    interp_cre_average = xr.Dataset({key: ("iwp", interp_cre_average[key]) for key in interp_cre_average.keys()}, coords={"iwp": coords["iwp"]})
+    coords = {
+        "iwp": (IWP_bins[:-1] + IWP_bins[1:]) / 2,
+        "time": (time_bins[:-1] + time_bins[1:]) / 2,
+    }
+    cre_arr = xr.Dataset(
+        {key: (("iwp", "time"), cre_arr[key]) for key in cre_arr.keys()}, coords=coords
+    )
+    interp_cre = xr.Dataset(
+        {key: (("iwp", "time"), interp_cre[key]) for key in interp_cre.keys()},
+        coords=coords,
+    )
+    interp_cre_average = xr.Dataset(
+        {key: ("iwp", interp_cre_average[key]) for key in interp_cre_average.keys()},
+        coords={"iwp": coords["iwp"]},
+    )
     if std:
-        cre_std_average = xr.Dataset({key: ("iwp", cre_std_average[key]) for key in cre_std_average.keys()}, coords={"iwp": coords["iwp"]})
+        cre_std_average = xr.Dataset(
+            {key: ("iwp", cre_std_average[key]) for key in cre_std_average.keys()},
+            coords={"iwp": coords["iwp"]},
+        )
         return cre_arr, interp_cre, interp_cre_average, cre_std_average
     else:
         return cre_arr, interp_cre, interp_cre_average
@@ -177,7 +213,9 @@ def calc_connected(ds, frac_no_cloud=0.05):
     h_liq = liq.argmax("height")
 
     # Calculate the mean cloud content between the heights of maximum ice and liquid content
-    cld_range_mean = no_cld.where((no_cld.height >= h_ice) & (no_cld.height <= h_liq)).mean("height")
+    cld_range_mean = no_cld.where(
+        (no_cld.height >= h_ice) & (no_cld.height <= h_liq)
+    ).mean("height")
 
     # Determine connectedness
     connected = xr.where(cld_range_mean < 1, 0, connected)
@@ -198,3 +236,117 @@ def calc_IWC_cumsum(ds):
         "long_name": "Cumulative Ice Water Content",
     }
     return IWC_cumsum
+
+
+def calc_heating_rates(rho, rs, rl, vgrid):
+    cp = 1004  # J kg^-1 K^-1 specific heat capacity of dry air at constant pressure
+    sw_hr = (
+        (1 / (rho * cp))
+        * ((rs).diff("height") / (vgrid["zg"].diff("height_2").values))
+        * 86400
+    )
+    lw_hr = (
+        (1 / (rho * cp))
+        * ((rl).diff("height") / (vgrid["zg"].diff("height_2").values))
+        * 86400
+    )
+    net_hr = sw_hr + lw_hr
+
+    hr_arr = xr.Dataset(
+        {
+            "sw_hr": sw_hr,
+            "lw_hr": lw_hr,
+            "net_hr": net_hr,
+        }
+    )
+
+    hr_arr["sw_hr"].attrs = {
+        "units": "K/day",
+        "long_name": "Shortwave heating rate",
+    }
+    hr_arr["lw_hr"].attrs = {
+        "units": "K/day",
+        "long_name": "Longwave heating rate",
+    }
+    hr_arr["net_hr"].attrs = {
+        "units": "K/day",
+        "long_name": "Net heating rate",
+    }
+
+    return hr_arr
+
+
+def calc_stability(ds):
+
+    cp = 1004  # J kg^-1 K^-1 specific heat capacity of dry air at constant pressure
+    R = 287  # J kg^-1 K^-1 gas constant of dry air
+
+    stab = (
+        (ds["ta"] / ds["pfull"]) * (R / cp)
+        - (ds["ta"].diff("height") / ds["pfull"].diff("height"))
+    ) * 1e5
+
+    stab.attrs = {
+        "units": "mK hPa^-1",
+        "long_name": "Stability",
+    }
+
+    return stab
+
+
+def calc_w_sub(ds):
+    wsub = (ds["net_hr"] / ds["stab"]) * 1e3
+    wsub.attrs = {
+        "units": "hPa day^-1",
+        "long_name": "Subsidence velocity",
+    }
+    return -wsub
+
+
+def calc_conv(wsub, pfull):
+    conv = wsub.diff("height") / (pfull.diff("height") / 1e2)
+    conv.attrs = {
+        "units": "day^-1",
+        "long_name": "Convergence",
+    }
+    return conv
+
+
+def calc_cf(ds):
+    cf = ((ds["clw"] + ds["qr"] + ds["cli"] + ds["qs"] + ds["qg"]) > 1e-6).astype(int)
+    cf.attrs = {
+        "units": "1",
+        "long_name": "Cloud Mask",
+    }
+    return cf
+
+
+def calc_stability_jev(ta, vgrid):
+    g = -9.81
+    cp = 1004
+    stab = (g / cp) - (ta.diff("height") / vgrid["zg"].diff("height_2").values)
+    stab.attrs = {
+        "units": "K m^-1",
+        "long_name": "Stability",
+    }
+    return stab
+
+
+def calc_w_sub_jev(net_hr, stab):
+    wsub = net_hr / stab
+    wsub.attrs = {
+        "units": "m day^-1",
+        "long_name": "Subsidence velocity",
+    }
+    return wsub
+
+
+def calc_conv_jev(wsub, vgrid):
+    conv = wsub.diff("height") / (
+        vgrid["zghalf"].sel(height=wsub["height"]).diff("height").values
+    )
+    conv.attrs = {
+        "units": "day^-1",
+        "long_name": "Convergence",
+    }
+    return conv

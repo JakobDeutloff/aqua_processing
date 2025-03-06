@@ -2,6 +2,16 @@
 import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
+from src.calc_variables import (
+    calc_heating_rates,
+    calc_stability,
+    calc_w_sub,
+    calc_conv,
+    calc_cf,
+    calc_stability_jev,
+    calc_w_sub_jev,
+    calc_conv_jev,
+)
 
 # %% load data
 runs = ["jed0011", "jed0022", "jed0033"]
@@ -10,152 +20,33 @@ datasets = {}
 for run in runs:
     datasets[run] = xr.open_dataset(
         f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample.nc"
-    ).sel(index=slice(0, 2e5))
+    ).sel(index=slice(0, 5e5))
 
 vgrid = xr.open_dataset(
     "/work/bm1183/m301049/icon-mpim/experiments/jed0001/atm_vgrid_angel.nc"
 ).mean("ncells")
-# %% get decrease of cloud fraction 
-cf = {}
-for run in runs:
-    cf[run] = ((datasets[run]["clivi"] + datasets[run]["qsvi"] + datasets[run]["qgvi"]) > 1e-5).mean()
-
-
-# %% calculate heating rates
-def calc_heating_rates(ds):
-    cp = 1004  # J kg^-1 K^-1 specific heat capacity of dry air at constant pressure
-    sw_hr = (
-        (1 / (ds["rho"] * cp))
-        * (
-            (ds["rsd"] - ds["rsu"]).diff("height")
-            / (vgrid["zg"].diff("height_2").values)
-        )
-        * 86400
-    )
-    lw_hr = (
-        (1 / (ds["rho"] * cp))
-        * (
-            (ds["rld"] - ds["rlu"]).diff("height")
-            / (vgrid["zg"].diff("height_2").values)
-        )
-        * 86400
-    )
-    net_hr = sw_hr + lw_hr
-
-    hr_arr = xr.Dataset(
-        {
-            "sw_hr": sw_hr,
-            "lw_hr": lw_hr,
-            "net_hr": net_hr,
-        }
-    )
-
-    hr_arr["sw_hr"].attrs = {
-        "units": "K/day",
-        "long_name": "Shortwave heating rate",
-    }
-    hr_arr["lw_hr"].attrs = {
-        "units": "K/day",
-        "long_name": "Longwave heating rate",
-    }
-    hr_arr["net_hr"].attrs = {
-        "units": "K/day",
-        "long_name": "Net heating rate",
-    }
-
-    return hr_arr
-
-
-def calc_stability(ds):
-
-    cp = 1004  # J kg^-1 K^-1 specific heat capacity of dry air at constant pressure
-    R = 287  # J kg^-1 K^-1 gas constant of dry air
-
-    stab = (
-        (ds["ta"] / ds["pfull"]) * (R / cp)
-        - (ds["ta"].diff("height") / ds["pfull"].diff("height"))
-    ) * 1e5
-
-    stab.attrs = {
-        "units": "mK hPa^-1",
-        "long_name": "Stability",
-    }
-
-    return stab
-
-
-def calc_w_sub(ds):
-    wsub = (ds["net_hr"] / ds["stab"]) * 1e3
-    wsub.attrs = {
-        "units": "hPa day^-1",
-        "long_name": "Subsidence velocity",
-    }
-    return -wsub
-
-
-def calc_conv(wsub, pfull):
-    conv = wsub.diff("height") / (pfull.diff("height") / 1e2)
-    conv.attrs = {
-        "units": "day^-1",
-        "long_name": "Convergence",
-    }
-    return conv
-
-
-def calc_cf(ds):
-    cf = ((ds["clw"] + ds["qr"] + ds["cli"] + ds["qs"] + ds["qg"]) > 1e-5).astype(int)
-    cf.attrs = {
-        "units": "1",
-        "long_name": "Cloud Mask",
-    }
-    return cf
 
 
 # %% calculate instataneous values
 hrs = {}
 masks_clearsky = {}
+conv = {}
 for run in runs:
     print(run)
-    hrs[run] = calc_heating_rates(datasets[run])
+    hrs[run] = calc_heating_rates(datasets[run], vgrid)
     hrs[run] = hrs[run].assign(stab=calc_stability(datasets[run]))
+    hrs[run] = hrs[run].assign(sub=calc_w_sub(hrs[run]))
+    conv[run] = calc_conv(
+        hrs[run]["sub"], datasets[run]["pfull"].sel(height=hrs[run]["height"])
+    )
     datasets[run] = datasets[run].assign(cf=calc_cf(datasets[run]))
 
     masks_clearsky[run] = (
         datasets[run]["clivi"] + datasets[run]["qsvi"] + datasets[run]["qgvi"]
-    ) < 1e-4
-
-# %%   calculate mean values
-subs = {}
-conv = {}
-idx_max_conv = {}
-z_max_conv = {}
-stab_max_conv = {}
-cf_max_conv = {}
-for run in runs:
-    subs[run] = calc_w_sub(hrs[run].where(masks_clearsky[run]).mean("index"))
-    conv[run] = calc_conv(
-        subs[run], datasets[run]["pfull"].where(masks_clearsky[run]).mean("index")
-    )
-    idx_max_conv[run] = (
-        conv[run]
-        .where(
-            (vgrid["zghalf"].sel(height=conv[run]["height"]) < 18e3)
-            & (vgrid["zghalf"].sel(height=conv[run]["height"]) > 6e3)
-        )
-        .argmax("height")
-    )
-    z_max_conv[run] = vgrid["zghalf"].sel(height=idx_max_conv[run]).values
-    stab_max_conv[run] = (
-        hrs[run]["stab"]
-        .where(masks_clearsky[run])
-        .mean("index")
-        .sel(height=idx_max_conv[run])
-    )
-    cf_max_conv[run] = datasets[run]["cf"].mean("index").sel(height=idx_max_conv[run])
-
+    ) < 1e-1
 
 # %% plot mean heating rate
-fig, axes = plt.subplots(1, 6, figsize=(14, 6), sharey=True)
+fig, axes = plt.subplots(1, 5, figsize=(14, 6), sharey=True)
 colors = {"jed0011": "k", "jed0022": "r", "jed0033": "orange"}
 height_range = slice(6e3, 18e3)
 
@@ -192,19 +83,25 @@ for run in runs:
         color=colors[run],
     )
     axes[2].plot(
-        subs[run].where(
-            (vgrid["zghalf"].sel(height=subs[run]["height"]) >= height_range.start)
-            & (vgrid["zghalf"].sel(height=subs[run]["height"]) <= height_range.stop)
+        hrs[run]["sub"]
+        .where(masks_clearsky[run])
+        .median("index")
+        .where(
+            (vgrid["zghalf"].sel(height=hrs[run]["height"]) >= height_range.start)
+            & (vgrid["zghalf"].sel(height=hrs[run]["height"]) <= height_range.stop)
         ),
-        mean_temp.sel(height=subs[run]["height"]).where(
-            (vgrid["zghalf"].sel(height=subs[run]["height"]) >= height_range.start)
-            & (vgrid["zghalf"].sel(height=subs[run]["height"]) <= height_range.stop)
+        mean_temp.sel(height=hrs[run]["height"]).where(
+            (vgrid["zghalf"].sel(height=hrs[run]["height"]) >= height_range.start)
+            & (vgrid["zghalf"].sel(height=hrs[run]["height"]) <= height_range.stop)
         ),
         label=exp_name[run],
         color=colors[run],
     )
     axes[3].plot(
-        conv[run].where(
+        conv[run]
+        .where(masks_clearsky[run])
+        .median("index")
+        .where(
             (vgrid["zghalf"].sel(height=conv[run]["height"]) >= height_range.start)
             & (vgrid["zghalf"].sel(height=conv[run]["height"]) <= height_range.stop)
         ),
@@ -229,23 +126,6 @@ for run in runs:
         label=exp_name[run],
         color=colors[run],
     )
-    axes[5].plot(
-        datasets[run]["pfull"]
-        .where(masks_clearsky[run])
-        .mean("index")
-        .where(
-            (vgrid["zghalf"].sel(height=datasets[run]["height"]) >= height_range.start)
-            & (vgrid["zghalf"].sel(height=datasets[run]["height"]) <= height_range.stop)
-        )
-        .diff("height")
-        / 1e2,
-        mean_temp.sel(height=hrs[run]["height"]).where(
-            (vgrid["zghalf"].sel(height=hrs[run]["height"]) >= height_range.start)
-            & (vgrid["zghalf"].sel(height=hrs[run]["height"]) <= height_range.stop)
-        ),
-        label=exp_name[run],
-        color=colors[run],
-    )
 
 axes[0].invert_yaxis()
 axes[0].set_ylim([260, 200])
@@ -264,160 +144,117 @@ axes[3].set_xlim([-0.1, 0.4])
 for ax in axes:
     ax.spines[["top", "right"]].set_visible(False)
 
-
-# %% scatter plots of values at max_conv vs Ts
-fig, axes = plt.subplots(1, 3, figsize=(10, 4))
-surftemps = {"jed0011": 0, "jed0022": 4, "jed0033": 2}
-
+# %% determine tropopause height
+height_trop = {}
+mask_stratosphere = vgrid["zg"].values < 30e3
 for run in runs:
-    axes[0].scatter(
-        surftemps[run],
-        stab_max_conv[run],
-        label=exp_name[run],
-        color=colors[run],
-    )
-    axes[1].scatter(
-        surftemps[run],
-        z_max_conv[run] / 1e3,
-        label=exp_name[run],
-        color=colors[run],
-    )
-    axes[2].scatter(
-        surftemps[run],
-        cf_max_conv[run],
-        label=exp_name[run],
-        color=colors[run],
-    )
-for ax in axes:
-    ax.set_xlabel(r"$T_{\mathrm{s}}$ anomaly / K")
-    ax.spines[["top", "right"]].set_visible(False)
-    ax.set_xticks([0, 2, 4])
-
-
-axes[0].set_ylabel("Stability at max convergence / mK hPa$^{-1}$")
-axes[1].set_ylabel("Height of max convergence / km")
-axes[2].set_ylabel("Cloud Fraction at max convergence")
-
-fig.tight_layout()
-
-# %% new calculateions based on jevanjee
-
-
-def calc_stability_jev(ds):
-    g = -9.81
-    cp = 1004
-    stab = (g / cp) - (ds["ta"].diff("height") / vgrid["zg"].diff("height_2").values)
-    stab.attrs = {
-        "units": "K m^-1",
-        "long_name": "Stability",
-    }
-    return stab
-
-
-def calc_w_sub_jev(ds):
-    wsub = ds["net_hr"] / ds["stab"]
-    wsub.attrs = {
-        "units": "m day^-1",
-        "long_name": "Subsidence velocity",
-    }
-    return wsub
-
-
-def calc_conv_jev(wsub):
-    conv = wsub.diff("height") / (
-        vgrid["zghalf"].sel(height=wsub["height"]).diff("height").values
-    )
-    conv.attrs = {
-        "units": "day^-1",
-        "long_name": "Convergence",
-    }
-    return conv
-
+    height_trop[run] = datasets[run]["ta"].where(mask_stratosphere).argmin("height")
 
 # %% calculte jevanjee values
 hrs_jev = {}
 masks_clearsky = {}
+mask_trop = {}
+conv_jev = {}
 for run in runs:
-    print(run)
-    hrs_jev[run] = calc_heating_rates(datasets[run])
-    hrs_jev[run] = hrs_jev[run].assign(stab=calc_stability_jev(datasets[run]))
+    mask_trop[run] = datasets[run]["height"] > height_trop[run]
+    ds = datasets[run].where(mask_trop[run])
+    hrs_jev[run] = calc_heating_rates(
+        ds["rho"], ds["rsd"] - ds["rsu"], ds["rld"] - ds["rlu"], vgrid
+    )
+    hrs_jev[run] = hrs_jev[run].assign(stab=calc_stability_jev(ds["ta"], vgrid=vgrid))
+    hrs_jev[run] = hrs_jev[run].assign(
+        sub=calc_w_sub_jev(hrs_jev[run]["net_hr"], hrs_jev[run]["stab"])
+    )
+    conv_jev[run] = calc_conv_jev(hrs_jev[run]["sub"], vgrid)
     datasets[run] = datasets[run].assign(cf=calc_cf(datasets[run]))
 
     masks_clearsky[run] = (
         datasets[run]["clivi"] + datasets[run]["qsvi"] + datasets[run]["qgvi"]
-    ) < 1e-4
+    ) < 1e-1
 
-subs_jev = {}
-conv_jev = {}
+
+# %% calcualte sub and conv from mean values
+sub_mean = {}
+sub_mean_cont = {}
+conv_mean = {}
+conv_mean_cont = {}
 for run in runs:
-    subs_jev[run] = calc_w_sub_jev(
-        hrs_jev[run].where(masks_clearsky[run]).median("index")
-    )
-    conv_jev[run] = calc_conv_jev(subs_jev[run])
+    mean_hrs = hrs_jev[run].where(masks_clearsky[run]).mean("index")
+    sub_mean[run] = calc_w_sub_jev(mean_hrs["net_hr"], mean_hrs["stab"])
+    conv_mean[run] = calc_conv_jev(sub_mean[run], vgrid)
 
+for run in ["jed0022", "jed0033"]:
+    mean_hrs = hrs_jev[run].where(masks_clearsky[run]).mean("index")
+    mean_hrs_control = hrs_jev["jed0011"].where(masks_clearsky["jed0011"]).mean("index")
+    sub_mean_cont[run] = calc_w_sub_jev(mean_hrs_control["net_hr"], mean_hrs["stab"])
+    conv_mean_cont[run] = calc_conv_jev(sub_mean_cont[run], vgrid)
 
 # %% plot results jevanjee
 
+colors = {"jed0011": "k", "jed0022": "r", "jed0033": "orange"}
 fig, axes = plt.subplots(1, 4, figsize=(14, 6), sharey=True)
+mask_hrs = (
+    vgrid["zghalf"].sel(height=hrs_jev["jed0011"]["height"]) >= height_range.start
+) & (vgrid["zghalf"].sel(height=hrs_jev["jed0011"]["height"]) <= height_range.stop)
+mask_conv = (
+    vgrid["zghalf"].sel(height=conv_jev["jed0011"]["height"]) >= height_range.start
+) & (vgrid["zghalf"].sel(height=conv_jev["jed0011"]["height"]) <= height_range.stop)
+
 
 for run in runs:
-    mean_temp = datasets[run]["ta"].where(masks_clearsky[run]).mean("index")
+    mean_temp = (
+        datasets[run]["ta"]
+        .where(mask_trop[run] & masks_clearsky[run])
+        .mean("index")
+    )
     axes[0].plot(
         hrs_jev[run]["net_hr"]
         .where(masks_clearsky[run])
         .median("index")
-        .where(
-            (vgrid["zghalf"].sel(height=hrs_jev[run]["height"]) >= height_range.start)
-            & (vgrid["zghalf"].sel(height=hrs_jev[run]["height"]) <= height_range.stop)
-        ),
-        mean_temp.sel(height=hrs_jev[run]["height"]).where(
-            (vgrid["zghalf"].sel(height=hrs_jev[run]["height"]) >= height_range.start)
-            & (vgrid["zghalf"].sel(height=hrs_jev[run]["height"]) <= height_range.stop)
-        ),
+        .where(mask_hrs),
+        mean_temp.sel(height=hrs_jev[run]["height"]).where(mask_hrs),
         label=exp_name[run],
         color=colors[run],
     )
     axes[1].plot(
-        hrs_jev[run]["stab"]
-        .where(masks_clearsky[run])
-        .median("index")
-        .where(
-            (vgrid["zghalf"].sel(height=hrs_jev[run]["height"]) >= height_range.start)
-            & (vgrid["zghalf"].sel(height=hrs_jev[run]["height"]) <= height_range.stop)
-        ),
-        mean_temp.sel(height=hrs_jev[run]["height"]).where(
-            (vgrid["zghalf"].sel(height=hrs_jev[run]["height"]) >= height_range.start)
-            & (vgrid["zghalf"].sel(height=hrs_jev[run]["height"]) <= height_range.stop)
-        ),
+        hrs_jev[run]["stab"].where(masks_clearsky[run]).median("index").where(mask_hrs),
+        mean_temp.sel(height=hrs_jev[run]["height"]).where(mask_hrs),
         label=exp_name[run],
         color=colors[run],
     )
     axes[2].plot(
-        subs_jev[run].where(
-            (vgrid["zghalf"].sel(height=subs_jev[run]["height"]) >= height_range.start)
-            & (vgrid["zghalf"].sel(height=subs_jev[run]["height"]) <= height_range.stop)
-        ),
-        mean_temp.sel(height=subs_jev[run]["height"]).where(
-            (vgrid["zghalf"].sel(height=subs_jev[run]["height"]) >= height_range.start)
-        ),
+        sub_mean[run].where(mask_hrs),
+        mean_temp.sel(height=sub_mean[run]["height"]).where(mask_hrs),
         label=exp_name[run],
         color=colors[run],
     )
     axes[3].plot(
-        -conv_jev[run].where(
-            (vgrid["zghalf"].sel(height=conv_jev[run]["height"]) >= height_range.start)
-            & (vgrid["zghalf"].sel(height=conv_jev[run]["height"]) <= height_range.stop)
-        ),
-        mean_temp.sel(height=conv_jev[run]["height"]).where(
-            (vgrid["zghalf"].sel(height=conv_jev[run]["height"]) >= height_range.start)
-            & (vgrid["zghalf"].sel(height=conv_jev[run]["height"]) <= height_range.stop)
-        ),
+        -conv_mean[run].where(mask_conv),
+        mean_temp.sel(height=conv_mean[run]["height"]).where(mask_conv),
         label=exp_name[run],
         color=colors[run],
     )
 
-    for ax in axes:
-        ax.spines[["top", "right"]].set_visible(False)
+for run in ["jed0022", "jed0033"]:
+    mean_temp = datasets[run]["ta"].where(masks_clearsky[run] & mask_trop[run]).mean("index")
+    axes[2].plot(
+        sub_mean_cont[run].where(mask_hrs),
+        mean_temp.sel(height=sub_mean_cont[run]["height"]).where(mask_hrs),
+        label=exp_name[run],
+        color=colors[run],
+        linestyle="--",
+    )
+    axes[3].plot(
+        -conv_mean_cont[run].where(mask_conv),
+        mean_temp.sel(height=conv_mean_cont[run]["height"]).where(mask_conv),
+        label=exp_name[run],
+        color=colors[run],
+        linestyle="--",
+    )
+
+
+for ax in axes:
+    ax.spines[["top", "right"]].set_visible(False)
 
 
 axes[0].set_ylabel("Temperature / K")
@@ -430,29 +267,36 @@ axes[1].set_xlim([-0.01, 0])
 axes[0].invert_yaxis()
 axes[0].set_ylim([260, 200])
 fig.tight_layout()
-fig.savefig('plots/iwp_drivers/stab_iris.png', dpi=300)
+fig.savefig("plots/iwp_drivers/stab_iris.png", dpi=300)
+
+
+# %% determine tropopause height
+fig, ax = plt.subplots(1, 1, figsize=(4, 6))
+ax.plot(datasets["jed0011"]["ta"].mean("index"), vgrid["zg"], label="control")
+ax.axhline(
+    vgrid["zg"].sel(height_2=height_trop["jed0011"]).median(), color="k", linestyle="--"
+)
+
 
 # %% compare actual lapse rates to moist adiabats
 laps_rate = {}
-masks_clearsky = {}
 for run in runs:
-    masks_clearsky[run] = (
-        datasets[run]["clivi"] + datasets[run]["qsvi"] + datasets[run]["qgvi"]
-    ) < 1e-6
-    laps_rate[run] = np.abs((
-        (datasets[run]["ta"].diff("height") / vgrid["zg"].diff("height_2").values)
-        .where(masks_clearsky[run])
-        .mean("index")
-    ))
+    laps_rate[run] = np.abs(
+        (
+            (datasets[run]["ta"].diff("height") / vgrid["zg"].diff("height_2").values)
+            .where(masks_clearsky[run])
+            .mean("index")
+        )
+    )
 
 
 # %% plot lapse rates
-fig, axes = plt.subplots(1, 2, figsize=(8, 6), sharey=True)
-height_range = slice(10e3, 18e3)
+fig, ax = plt.subplots(figsize=(4, 6))
+height_range = slice(6e3, 16e3)
 
 for run in runs:
     mean_temp = datasets[run]["ta"].where(masks_clearsky[run]).mean("index")
-    axes[0].plot(
+    ax.plot(
         laps_rate[run].where(
             (vgrid["zghalf"].sel(height=laps_rate[run]["height"]) >= height_range.start)
             & (
@@ -466,34 +310,18 @@ for run in runs:
                 vgrid["zghalf"].sel(height=laps_rate[run]["height"])
                 <= height_range.stop
             )
-        ),
-        label=exp_name[run],
-        color=colors[run],
-    )
-    axes[1].plot(
-        laps_rate[run].where(
-            (vgrid["zghalf"].sel(height=laps_rate[run]["height"]) >= height_range.start)
-            & (
-                vgrid["zghalf"].sel(height=laps_rate[run]["height"])
-                <= height_range.stop
-            )
-        ) - 
-        laps_rate["jed0011"].where(
-            (vgrid["zghalf"].sel(height=laps_rate[run]["height"]) >= height_range.start)
-            & (
-                vgrid["zghalf"].sel(height=laps_rate[run]["height"])
-                <= height_range.stop
-            )
-        ),
-        mean_temp.sel(height=laps_rate[run]["height"]).where(
-            (vgrid["zghalf"].sel(height=datasets[run]["height"]) >= height_range.start)
-            & (vgrid["zghalf"].sel(height=datasets[run]["height"]) <= height_range.stop)
         ),
         label=exp_name[run],
         color=colors[run],
     )
 
-axes[0].invert_yaxis()
+
+ax.invert_yaxis()
+ax.set_ylim([260, 200])
+ax.set_xlim([0.004, 0.0085])
+ax.spines[["top", "right"]].set_visible(False)
+ax.set_ylabel("Temperature / K")
+ax.set_xlabel("Lapse rate / K m$^{-1}$")
 
 # %% look at real clear-sky convergence
 conv_real = {}
@@ -510,22 +338,34 @@ for run in ["jed0011", "jed0022"]:
 # %% plot real convergence
 
 fig, ax = plt.subplots(1, 1, figsize=(4, 6))
-height_range = slice(10e3, 18e3)
+height_range = slice(6e3, 18e3)
 
 for run in ["jed0011", "jed0022"]:
+    mean_temp = datasets[run]["ta"].where(masks_clearsky[run]).mean("index")
     ax.plot(
         conv_real[run].where(
             (vgrid["zg"].sel(height_2=conv_real[run]["height_2"]) >= height_range.start)
-            & (vgrid["zg"].sel(height_2=conv_real[run]["height_2"]) <= height_range.stop)
-        ),
-        vgrid["zg"].sel(height_2=conv_real[run]["height_2"]).where(
+            & (
+                vgrid["zg"].sel(height_2=conv_real[run]["height_2"])
+                <= height_range.stop
+            )
+        )
+        * 86400,
+        mean_temp.sel(height=conv_real[run]["height_2"]).where(
             (vgrid["zg"].sel(height_2=conv_real[run]["height_2"]) >= height_range.start)
-            & (vgrid["zg"].sel(height_2=conv_real[run]["height_2"]) <= height_range.stop)
+            & (
+                vgrid["zg"].sel(height_2=conv_real[run]["height_2"])
+                <= height_range.stop
+            )
         ),
         label=exp_name[run],
         color=colors[run],
     )
-
+    ax.invert_yaxis()
+    ax.set_ylim([260, 200])
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.set_ylabel("Temperature / K")
+    ax.set_xlabel("Convergence / day$^{-1}$")
 
 
 # %%
