@@ -6,12 +6,12 @@ import os
 import sys
 
 # %% load data
-run = "jed0011"  # sys.argv[1]
+run = sys.argv[1]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 
 ds = xr.open_dataset(
     f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample.nc"
-).sel(index=slice(0, 1e6))
+)
 
 vgrid = (
     xr.open_dataset(
@@ -60,7 +60,7 @@ with ProgressBar():
 
 # %% regrid to temperature
 print("Regrid to temperature")
-ds_regrid = ds.interp(height=height_array, method="linear")
+ds_regrid = ds.interp(height=height_array, method="quintic")
 
 # %% save regridded dataset
 print("Save dataset")
