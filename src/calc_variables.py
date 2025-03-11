@@ -238,16 +238,16 @@ def calc_IWC_cumsum(ds):
     return IWC_cumsum
 
 
-def calc_heating_rates(rho, rs, rl, vgrid):
+def calc_heating_rates(rho, rs, rl, zg):
     cp = 1004  # J kg^-1 K^-1 specific heat capacity of dry air at constant pressure
     sw_hr = (
         (1 / (rho * cp))
-        * ((rs).diff("height") / (vgrid["zg"].diff("height_2").values))
+        * ((rs).diff("temp") / (zg.diff("temp").values))
         * 86400
     )
     lw_hr = (
         (1 / (rho * cp))
-        * ((rl).diff("height") / (vgrid["zg"].diff("height_2").values))
+        * ((rl).diff("temp") / (zg.diff("temp").values))
         * 86400
     )
     net_hr = sw_hr + lw_hr
@@ -277,20 +277,29 @@ def calc_heating_rates(rho, rs, rl, vgrid):
 
 
 def calc_cf(ds):
-    cf = ((ds["clw"] + ds["qr"] + ds["cli"] + ds["qs"] + ds["qg"]) > 1e-6).astype(int)
+    cf = ((ds["clw"] + ds["qr"] + ds["cli"] + ds["qs"] + ds["qg"]) > 1e-5).astype(int)
     cf.attrs = {
         "units": "1",
         "long_name": "Cloud Mask",
     }
     return cf
 
+def calc_pot_temp(ta, p):
+    kappa = 0.286
+    theta = ta * (1000 / p) ** kappa
+    theta.attrs = {
+        "units": "K",
+        "long_name": "Potential Temperature",
+    }
+    return theta
 
-def calc_stability(ta, vgrid):
-    g = -9.81
-    cp = 1004
-    stab = (g / cp) - (ta.diff("height") / vgrid["zg"].diff("height_2").values)
+def calc_stability(theta, t, zg):
+    Rd = 287.05
+    g = 9.81
+    scaleheight = (Rd * t) / g
+    stab = scaleheight * (1/theta) * (theta.diff("temp") / zg.diff("temp")) 
     stab.attrs = {
-        "units": "K m^-1",
+        "units": "1",
         "long_name": "Stability",
     }
     return stab
@@ -299,16 +308,14 @@ def calc_stability(ta, vgrid):
 def calc_w_sub(net_hr, stab):
     wsub = net_hr / stab
     wsub.attrs = {
-        "units": "m day^-1",
+        "units": "K day^-1",
         "long_name": "Subsidence velocity",
     }
     return wsub
 
 
-def calc_conv(wsub, vgrid):
-    conv = wsub.diff("height") / (
-        vgrid["zghalf"].sel(height=wsub["height"]).diff("height").values
-    )
+def calc_conv(wsub):
+    conv = wsub.diff("temp")
     conv.attrs = {
         "units": "day^-1",
         "long_name": "Convergence",

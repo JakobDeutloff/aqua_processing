@@ -14,18 +14,18 @@ for run in runs:
         f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
     )
     cre_interp_mean[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand_p.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand_t.nc"
     )
 
-# %% calculate masks 
-mode = 'pressure'
+# %% calculate masks
+mode = "temperature"
 masks_height = {}
 for run in runs:
-    if mode == 'temperature':
-        masks_height[run] = datasets[run]['hc_top_temperature'] < (273.15 - 35)
-    elif mode == 'pressure':
-        masks_height[run] = datasets[run]['hc_top_pressure'] < 350
-    elif mode == 'raw':
+    if mode == "temperature":
+        masks_height[run] = datasets[run]["hc_top_temperature"] < (273.15 - 35)
+    elif mode == "pressure":
+        masks_height[run] = datasets[run]["hc_top_pressure"] < 350
+    elif mode == "raw":
         masks_height[run] = True
 # %% plot CRE
 fig, ax = plt.subplots(figsize=(7, 4))
@@ -111,20 +111,23 @@ axes[2].set_ylabel(r"$\Delta C_{\mathrm{net}}(I)$  / W m$^{-2}$")
 fig.savefig(f"plots/feedback/{mode}/cre_iwp_diff.png", dpi=300, bbox_inches="tight")
 
 # %% read cloudsat
-cloudsat = read_cloudsat("2009")
+cloudsat_raw = read_cloudsat("2009")
+
+# %% average over pairs of three entries in cloudsat to get to a resolution of 4.8 km
+cloudsat = cloudsat_raw.to_xarray().coarsen({"scnline": 3}, boundary="trim").mean()
 
 # %% calculate iwp hist
 iwp_bins = np.logspace(-4, np.log10(40), 51)
 histograms = {}
 for run in runs:
-    iwp = datasets[run]['iwp'].where(masks_height[run])
+    iwp = datasets[run]["iwp"].where(masks_height[run])
     histograms[run], edges = np.histogram(iwp, bins=iwp_bins, density=False)
     histograms[run] = histograms[run] / len(iwp)
 
 histograms["cloudsat"], _ = np.histogram(
     cloudsat["ice_water_path"] / 1e3, bins=iwp_bins, density=False
 )
-histograms["cloudsat"] = histograms["cloudsat"] / len(cloudsat)
+histograms["cloudsat"] = histograms["cloudsat"] / len(cloudsat["ice_water_path"])
 
 # %% plot iwp hists
 fig, ax = plt.subplots(1, 1, figsize=(8, 5))
@@ -156,7 +159,9 @@ ax.set_ylabel("P(IWP)")
 ax.set_xlabel("IWP / kg m$^{-2}$")
 ax.set_xlim([1e-4, 40])
 ax.spines[["top", "right"]].set_visible(False)
-fig.savefig(f"plots/feedback/{mode}/iwp_hist_rand_diff.png", dpi=300, bbox_inches="tight")
+fig.savefig(
+    f"plots/feedback/{mode}/iwp_hist_rand_diff.png", dpi=300, bbox_inches="tight"
+)
 
 # %% multiply CRE and iwp hist
 cre_folded = {}
@@ -206,6 +211,95 @@ ax.set_ylabel("$C(I) \cdot P(I)$  / W m$^{-2}$")
 ax.set_xscale("log")
 ax.set_xlim([1e-4, 40])
 fig.savefig(f"plots/feedback/{mode}/cre_iwp_folded.png", dpi=300, bbox_inches="tight")
+
+# %% plot diff of folded CRE
+temp_deltas = {"jed0022": 4, "jed0033": 2}
+linestyles = {"jed0022": "--", "jed0033": "-"}
+fig, axes = plt.subplots(3, 1, figsize=(8, 8), sharex=True)
+
+for run in ["jed0022", "jed0033"]:
+    axes[0].set_title("Total Feedback")
+    axes[0].stairs(
+        (cre_folded[run]["sw"] - cre_folded["jed0011"]["sw"]) / temp_deltas[run],
+        edges,
+        color="blue",
+        linestyle=linestyles[run],
+    )
+    axes[0].stairs(
+        (cre_folded[run]["lw"] - cre_folded["jed0011"]["lw"]) / temp_deltas[run],
+        edges,
+        color="red",
+        linestyle=linestyles[run],
+    )
+    axes[0].stairs(
+        (cre_folded[run]["net"] - cre_folded["jed0011"]["net"]) / temp_deltas[run],
+        edges,
+        color="k",
+        linestyle=linestyles[run],
+    )
+    axes[1].set_title("IWP Change Feedback")
+    axes[1].stairs(
+        (const_cre_folded[run]["sw"] - const_cre_folded["jed0011"]["sw"])
+        / temp_deltas[run],
+        edges,
+        color="blue",
+        linestyle=linestyles[run],
+    )
+    axes[1].stairs(
+        (const_cre_folded[run]["lw"] - const_cre_folded["jed0011"]["lw"])
+        / temp_deltas[run],
+        edges,
+        color="red",
+        linestyle=linestyles[run],
+    )
+    axes[1].stairs(
+        (const_cre_folded[run]["net"] - const_cre_folded["jed0011"]["net"])
+        / temp_deltas[run],
+        edges,
+        color="k",
+        linestyle=linestyles[run],
+    )
+    axes[2].set_title("CRE Change Feedback")
+    axes[2].stairs(
+        (const_iwp_folded[run]["sw"] - const_iwp_folded["jed0011"]["sw"])
+        / temp_deltas[run],
+        edges,
+        color="blue",
+        linestyle=linestyles[run],
+    )
+    axes[2].stairs(
+        (const_iwp_folded[run]["lw"] - const_iwp_folded["jed0011"]["lw"])
+        / temp_deltas[run],
+        edges,
+        color="red",
+        linestyle=linestyles[run],
+    )
+    axes[2].stairs(
+        (const_iwp_folded[run]["net"] - const_iwp_folded["jed0011"]["net"])
+        / temp_deltas[run],
+        edges,
+        color="k",
+        label=exp_name[run],
+        linestyle=linestyles[run],
+    )
+
+for ax in axes:
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.set_xlim([1e-4, 40])
+    ax.set_xscale("log")
+    ax.axhline(0, color="grey", linestyle="-", linewidth=0.8)
+    ax.set_ylabel("Feedback / W m$^{-2}$ K$^{-1}$")
+    ax.set_ylim([-0.04, 0.04])
+
+axes[-1].set_xlabel("$I$  / kg m$^{-2}$")
+
+labels = ["+2K", "+4K"]
+handles = [
+    plt.Line2D([0], [0], color="grey", linestyle="-"),
+    plt.Line2D([0], [0], color="grey", linestyle="--"),
+]
+fig.legend(handles, labels, bbox_to_anchor=[0.9, 0.07], frameon=True, ncols=2)
+fig.savefig(f"plots/feedback/{mode}/cre_iwp_folded_diff.png", dpi=300, bbox_inches="tight")
 
 # %% calculate integrated CRE and feedback
 cre_integrated = {}
