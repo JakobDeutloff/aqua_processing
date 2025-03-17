@@ -238,7 +238,7 @@ def calc_IWC_cumsum(ds):
     return IWC_cumsum
 
 
-def calc_heating_rates(rho, rs, rl, zg):
+def calc_heating_rates_t(rho, rs, rl, zg):
     cp = 1004  # J kg^-1 K^-1 specific heat capacity of dry air at constant pressure
     sw_hr = (
         (1 / (rho * cp))
@@ -276,14 +276,6 @@ def calc_heating_rates(rho, rs, rl, zg):
     return hr_arr
 
 
-def calc_cf(ds):
-    cf = ((ds["clw"] + ds["qr"] + ds["cli"] + ds["qs"] + ds["qg"]) > 1e-5).astype(int)
-    cf.attrs = {
-        "units": "1",
-        "long_name": "Cloud Mask",
-    }
-    return cf
-
 def calc_pot_temp(ta, p):
     kappa = 0.286
     theta = ta * (1000 / p) ** kappa
@@ -293,7 +285,7 @@ def calc_pot_temp(ta, p):
     }
     return theta
 
-def calc_stability(theta, t, zg):
+def calc_stability_t(theta, t, zg):
     Rd = 287.05
     g = 9.81
     scaleheight = (Rd * t) / g
@@ -305,7 +297,7 @@ def calc_stability(theta, t, zg):
     return stab
 
 
-def calc_w_sub(net_hr, stab):
+def calc_w_sub_t(net_hr, stab):
     wsub = net_hr / stab
     wsub.attrs = {
         "units": "K day^-1",
@@ -314,8 +306,85 @@ def calc_w_sub(net_hr, stab):
     return wsub
 
 
-def calc_conv(wsub):
+def calc_conv_t(wsub):
     conv = wsub.diff("temp")
+    conv.attrs = {
+        "units": "day^-1",
+        "long_name": "Convergence",
+    }
+    return conv
+
+def calc_heating_rates(rho, rs, rl, vgrid):
+    cp = 1004  # J kg^-1 K^-1 specific heat capacity of dry air at constant pressure
+    sw_hr = (
+        (1 / (rho * cp))
+        * ((rs).diff("height") / (vgrid["zg"].diff("height")))
+        * 86400
+    )
+    lw_hr = (
+        (1 / (rho * cp))
+        * ((rl).diff("height") / (vgrid["zg"].diff("height")))
+        * 86400
+    )
+    net_hr = sw_hr + lw_hr
+
+    hr_arr = xr.Dataset(
+        {
+            "sw_hr": sw_hr,
+            "lw_hr": lw_hr,
+            "net_hr": net_hr,
+        }
+    )
+
+    hr_arr["sw_hr"].attrs = {
+        "units": "K/day",
+        "long_name": "Shortwave heating rate",
+    }
+    hr_arr["lw_hr"].attrs = {
+        "units": "K/day",
+        "long_name": "Longwave heating rate",
+    }
+    hr_arr["net_hr"].attrs = {
+        "units": "K/day",
+        "long_name": "Net heating rate",
+    }
+
+    return hr_arr
+
+
+def calc_cf(ds):
+    cf = ((ds["clw"] + ds["qr"] + ds["cli"] + ds["qs"] + ds["qg"]) > 1e-6).astype(int)
+    cf.attrs = {
+        "units": "1",
+        "long_name": "Cloud Mask",
+    }
+    return cf
+
+
+def calc_stability(ta, vgrid):
+    g = -9.81
+    cp = 1004
+    stab = (g / cp) - (ta.diff("height") / vgrid["zg"].diff("height").values)
+    stab.attrs = {
+        "units": "K m^-1",
+        "long_name": "Stability",
+    }
+    return stab
+
+
+def calc_w_sub(net_hr, stab):
+    wsub = net_hr / stab
+    wsub.attrs = {
+        "units": "m day^-1",
+        "long_name": "Subsidence velocity",
+    }
+    return wsub
+
+
+def calc_conv(wsub, vgrid):
+    conv = wsub.diff("height") / (
+        vgrid["zghalf"].sel(height_2=wsub["height"]).diff("height").values
+    )
     conv.attrs = {
         "units": "day^-1",
         "long_name": "Convergence",

@@ -6,12 +6,12 @@ import os
 import sys
 
 # %% load data
-run = sys.argv[1]
+run = "jed0011" #sys.argv[1]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 
 ds = xr.open_dataset(
     f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample.nc"
-)
+).sel(index=slice(0, 1e6))
 
 vgrid = (
     xr.open_dataset(
@@ -27,7 +27,7 @@ ds = ds.drop_vars([var for var in ds.variables if "height" not in ds[var].dims])
 ds = ds.assign(zg = vgrid["zg"])
 ds = ds.assign(dzghalf = vgrid["dzghalf"])
 ds = ds.assign_coords(index = ds["index"])
-ds = ds.chunk({"index": 3e4})
+ds = ds.chunk({"index": 1e6, "height": -1})
 
 # %% determine tropopause height and clearsky
 mask_stratosphere = vgrid["zg"].values < 20e3

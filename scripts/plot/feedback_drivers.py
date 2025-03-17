@@ -16,17 +16,17 @@ for run in runs:
         f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand_raw.nc"
     )
 
-# %% calculate masks 
-mode = 'raw'
+# %% calculate masks
+mode = "temperature"
 iwp_bins = np.logspace(-4, np.log10(40), 51)
 colors = {"jed0011": "k", "jed0022": "red", "jed0033": "orange"}
 masks_height = {}
 for run in runs:
-    if mode == 'temperature':
-        masks_height[run] = datasets[run]['hc_top_temperature'] < (273.15 - 35)
-    elif mode == 'pressure':
-        masks_height[run] = datasets[run]['hc_top_pressure'] < 350
-    elif mode == 'raw':
+    if mode == "temperature":
+        masks_height[run] = datasets[run]["hc_top_temperature"] < (273.15 - 35)
+    elif mode == "pressure":
+        masks_height[run] = datasets[run]["hc_top_pressure"] < 350
+    elif mode == "raw":
         masks_height[run] = True
 # %% investigate low cloud fraction
 fig, ax = plt.subplots()
@@ -154,25 +154,21 @@ axes[2, 1].remove()
 fig.tight_layout()
 fig.savefig("plots/feedback/hc_top_pressure_thresholds.png", dpi=300)
 
-# %% plot histograms of cloud top pressure
+# %% plot histograms of cloud top temperature
 hists_p = {}
 percentile_90 = {}
 median = {}
 fig, ax = plt.subplots()
 for run in runs:
     percentile_90[run] = datasets[run]["hc_top_temperature"].quantile(0.90).values
-    median[run] = (
-        datasets[run]["hc_top_temperature"]
-        .quantile(0.5)
-        .values
-    )
+    median[run] = datasets[run]["hc_top_temperature"].quantile(0.5).values
     hists_p[run] = np.histogram(
         datasets[run]["hc_top_temperature"].values,
         bins=np.linspace(180, 280, 70),
         density=True,
     )
     ax.stairs(hists_p[run][0], hists_p[run][1], label=exp_name[run], color=colors[run])
-    ax.axvline(median[run], color=colors[run], linestyle="--")
+    ax.axvline(median[run], color=colors[run], linestyle="--", alpha=0.5)
     ax.axvline(273.15 - 35, color="grey")
     ax.axvline(percentile_90[run], color=colors[run], linestyle=":")
 ax.set_xlabel("$T_{\mathrm{hc}}$  / K")
@@ -195,7 +191,7 @@ fig, ax = plt.subplots()
 
 for run in runs:
     datasets[run]["hc_top_temperature"].where(
-        datasets[run]["hc_top_temperature"] < 273.13 - 35
+        datasets[run]["hc_top_temperature"] < percentile_90[run]
     ).groupby_bins(
         datasets[run]["iwp"],
         iwp_bins,
@@ -205,6 +201,32 @@ for run in runs:
 ax.set_xscale("log")
 ax.set_xlabel("$I$  / kg m$^{-2}$")
 ax.set_ylabel(r"$T_{\mathrm{hc}}$  / K")
+ax.spines[["top", "right"]].set_visible(False)
+
+# %% check at which temperature there is no more liquid condensate
+share_liquid = (datasets["jed0011"]["clw"] + datasets["jed0011"]["qr"]) / (
+    datasets["jed0011"]["cli"]
+    + datasets["jed0011"]["qs"]
+    + datasets["jed0011"]["qg"]
+    + datasets["jed0011"]["clw"]
+    + datasets["jed0011"]["qr"]
+)
+# %%
+fig, ax = plt.subplots()
+t_bins = np.linspace(180, 300, 100)
+t_points = (t_bins[1:] + t_bins[:-1]) / 2
+binned_share = share_liquid.sel(index=slice(0, 1e3)).groupby_bins(datasets['jed0011']['ta'].sel(index=slice(0, 1e3)), t_bins).mean()
+
+ax.scatter(
+    datasets['jed0011']['ta'].sel(index=slice(0, 1e3)),
+    share_liquid.sel(index=slice(0, 1e3)),
+    s=0.1, 
+    alpha=0.1
+)
+ax.plot(t_points, binned_share, color="k")
+ax.axvline(273.15 - 35, color="grey", linestyle="--")
+ax.set_xlabel("Temperature / K")
+ax.set_ylabel("Share of liquid condensate")
 ax.spines[["top", "right"]].set_visible(False)
 
 # %%
