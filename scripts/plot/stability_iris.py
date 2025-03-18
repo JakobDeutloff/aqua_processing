@@ -12,6 +12,7 @@ from src.calc_variables import (
 # %% load data
 runs = ["jed0011", "jed0022", "jed0033"]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
+colors = {"jed0011": "k", "jed0022": "r", "jed0033": "orange"}
 datasets = {}
 for run in runs:
     datasets[run] = xr.open_dataset(
@@ -65,7 +66,6 @@ for run in runs:
 
 # %% plot results jevanjee
 height_range = slice(6e3, 16e3)
-colors = {"jed0011": "k", "jed0022": "r", "jed0033": "orange"}
 fig, axes = plt.subplots(1, 4, figsize=(14, 6), sharey=True)
 mask_hrs = (
     vgrid["zghalf"].sel(height_2=hrs_jev["jed0011"]["height"]) >= height_range.start
@@ -190,3 +190,24 @@ for run in ["jed0011", "jed0022"]:
     ax.set_xlabel("Convergence / day$^{-1}$")
 
 
+# %% plot ozone 
+fig, ax = plt.subplots()
+
+for run in runs:
+    ax.plot(
+        datasets[run]["o3"].mean("index"),
+        vgrid['zg']/1e3,
+        label=exp_name[run],
+        color=colors[run],
+    )
+
+ax.set_xlabel("Ozone / kg kg$^{-1}$")
+ax.set_ylabel("Height / km")
+ax.spines[["top", "right"]].set_visible(False)
+ax.legend()
+ax.set_ylim([0, 18])
+ax.set_xlim([0, 1e-7])
+fig.savefig('plots/iwp_drivers/ozone_height.png', dpi=300)
+
+
+# %%

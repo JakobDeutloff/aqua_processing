@@ -18,7 +18,7 @@ for run in runs:
     )
 
 # %% calculate masks
-mode = "temperature"
+mode = "temp_narrow"
 masks_height = {}
 for run in runs:
     if mode == "temperature":
@@ -27,6 +27,12 @@ for run in runs:
         masks_height[run] = datasets[run]["hc_top_pressure"] < 350
     elif mode == "raw":
         masks_height[run] = True
+    elif mode == "temp_narrow":
+        masks_height[run] = (
+            (datasets[run]["hc_top_temperature"] < (273.15 - 35))
+            & (datasets[run]["clat"] < 20)
+            & (datasets[run]["clat"] > -20)
+        )
 # %% plot CRE
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.axhline(0, color="grey", linestyle="--", linewidth=0.8)
@@ -299,7 +305,9 @@ handles = [
     plt.Line2D([0], [0], color="grey", linestyle="--"),
 ]
 fig.legend(handles, labels, bbox_to_anchor=[0.9, 0.07], frameon=True, ncols=2)
-fig.savefig(f"plots/feedback/{mode}/cre_iwp_folded_diff.png", dpi=300, bbox_inches="tight")
+fig.savefig(
+    f"plots/feedback/{mode}/cre_iwp_folded_diff.png", dpi=300, bbox_inches="tight"
+)
 
 # %% calculate integrated CRE and feedback
 cre_integrated = {}

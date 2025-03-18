@@ -17,7 +17,7 @@ for run in runs:
     )
 
 # %% calculate masks
-mode = "temperature"
+mode = "temp_narrow"
 iwp_bins = np.logspace(-4, np.log10(40), 51)
 colors = {"jed0011": "k", "jed0022": "red", "jed0033": "orange"}
 masks_height = {}
@@ -28,6 +28,12 @@ for run in runs:
         masks_height[run] = datasets[run]["hc_top_pressure"] < 350
     elif mode == "raw":
         masks_height[run] = True
+    elif mode == "temp_narrow":
+        masks_height[run] = (
+            (datasets[run]["hc_top_temperature"] < (273.15 - 35))
+            & (datasets[run]["clat"] < 20)
+            & (datasets[run]["clat"] > -20)
+        )
 # %% investigate low cloud fraction
 fig, ax = plt.subplots()
 

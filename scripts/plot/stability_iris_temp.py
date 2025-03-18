@@ -229,4 +229,19 @@ axes[0, 1].set_xscale("log")
 fig.tight_layout()
 fig.savefig("plots/iwp_drivers/humidity_temp.png", dpi=300)
 
+# %% plot ozone 
+fig, ax = plt.subplots()
+for run in runs:
+    ax.plot(
+        datasets[run]["o3"].mean("index"),
+        datasets[run]["temp"],
+        label=exp_name[run],
+        color=colors[run],
+    )
+
+ax.set_xlabel("Ozone / kg kg$^{-1}$")
+ax.set_ylabel("Temperature / K")
+ax.spines[["top", "right"]].set_visible(False)
+ax.invert_yaxis()
+
 # %%
