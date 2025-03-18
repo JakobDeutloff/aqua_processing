@@ -191,22 +191,30 @@ for run in ["jed0011", "jed0022"]:
 
 
 # %% plot ozone 
-fig, ax = plt.subplots()
+fig, axes = plt.subplots(1, 2, figsize=(6, 6))
 
 for run in runs:
-    ax.plot(
+    axes[0].plot(
+        datasets[run]["o3"].mean("index"),
+        vgrid['zg']/1e3,
+        label=exp_name[run],
+        color=colors[run],
+    )
+    axes[1].plot(
         datasets[run]["o3"].mean("index"),
         vgrid['zg']/1e3,
         label=exp_name[run],
         color=colors[run],
     )
 
-ax.set_xlabel("Ozone / kg kg$^{-1}$")
-ax.set_ylabel("Height / km")
-ax.spines[["top", "right"]].set_visible(False)
-ax.legend()
-ax.set_ylim([0, 18])
-ax.set_xlim([0, 1e-7])
+for ax in axes:
+    ax.set_xlabel("Ozone / kg kg$^{-1}$")
+    ax.set_ylabel("Height / km")
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.legend()
+
+axes[1].set_ylim([0, 16])
+axes[1].set_xlim([0.4e-8, 2e-7])
 fig.savefig('plots/iwp_drivers/ozone_height.png', dpi=300)
 
 

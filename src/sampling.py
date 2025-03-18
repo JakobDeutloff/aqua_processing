@@ -109,7 +109,7 @@ def get_random_coords(run, model_config, exp_name, number=0):
     )
 
     # select tropics
-    ds_3D_trop = ds_3D.where((ds_3D.clat < 30) & (ds_3D.clat > -30), drop=True)
+    ds_3D_trop = ds_3D.where((ds_3D.clat < 20) & (ds_3D.clat > -20), drop=True)
 
     # get random coordinates across time and ncells
     ncells = ds_3D_trop.sizes["ncells"]

@@ -13,6 +13,7 @@ from scipy.signal import savgol_filter
 # %%
 runs = ["jed0011", "jed0022", "jed0033"]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
+colors = {"jed0011": "k", "jed0022": "r", "jed0033": "orange"}
 datasets = {}
 datasets
 for run in runs:
@@ -95,7 +96,6 @@ for run in runs:
             dims=conv_mean_cont[run].dims,
         )
 # %% plot results jevanjee
-colors = {"jed0011": "k", "jed0022": "r", "jed0033": "orange"}
 fig, axes = plt.subplots(1, 4, figsize=(14, 6), sharey=True)
 
 for run in runs:
@@ -230,7 +230,7 @@ fig.tight_layout()
 fig.savefig("plots/iwp_drivers/humidity_temp.png", dpi=300)
 
 # %% plot ozone 
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(4, 6))
 for run in runs:
     ax.plot(
         datasets[run]["o3"].mean("index"),
@@ -243,5 +243,6 @@ ax.set_xlabel("Ozone / kg kg$^{-1}$")
 ax.set_ylabel("Temperature / K")
 ax.spines[["top", "right"]].set_visible(False)
 ax.invert_yaxis()
+fig.savefig("plots/iwp_drivers/ozone_temp.png", dpi=300, bbox_inches="tight")
 
 # %%

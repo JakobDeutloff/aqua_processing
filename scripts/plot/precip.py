@@ -57,11 +57,14 @@ for run in runs:
 
 # %%
 atm_cooling = {}
+cooling_increase = {}
 energy_p = {}
 L = 2.45e6  # latent heat of vaporization in J/kg
 for run in runs:
     atm_cooling[run] = r_toa[run] + r_surf[run] + sh[run]
     energy_p[run] = np.abs(atm_cooling[run]) / L
+    cooling_increase[run] = (atm_cooling[run] - atm_cooling['jed0011']) * 100 / atm_cooling['jed0011']
+
 
 
 

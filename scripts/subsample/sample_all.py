@@ -19,20 +19,5 @@ filelist = [f for f in os.listdir(dir) if f.startswith(f"{run}_{filetype}")]
 # %%  sample files
 for file in filelist:
     print(f"subsample {file}")
-    subsample_file(f"{dir}/{file}", exp_name[run])
-# %% concatenate files 
-path = (
-    f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/"
-)
+    subsample_file(f"{dir}/{file}", exp_name[run], 1)
 
-# read ds from files
-ds  = (
-    xr.open_mfdataset(
-        f"{path}{run}_{filetype}*.nc",
-        combine="nested",
-        concat_dim=["index"],
-    )
-    .sortby("index")
-)
-# save ds to file
-datasets[file].to_netcdf(f"{path}{run}_{file[:-3]}_randsample.nc")
