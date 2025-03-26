@@ -275,6 +275,13 @@ def calc_heating_rates_t(rho, rs, rl, zg):
 
     return hr_arr
 
+def calc_flux_conv_t(r, zg):
+    f_conv = (r).diff("temp") / (zg.diff("temp").values)
+    f_conv.attrs = {
+        "units": "W m^-2 m^-1",
+        "long_name": "Flux convergence",
+    }
+    return f_conv
 
 def calc_pot_temp(ta, p):
     kappa = 0.286

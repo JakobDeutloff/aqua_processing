@@ -9,7 +9,7 @@ exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 datasets = {}
 for run in runs:
     datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_20.nc"
     )
 
 vgrid = (
@@ -36,7 +36,7 @@ for run in runs:
     )
 
     # save data
-    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_heating_rates.nc"
+    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_heating_rates_20.nc"
     if os.path.exists(path):
         os.remove(path)
     hrs[run].to_netcdf(path)

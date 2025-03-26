@@ -8,8 +8,10 @@ from src.calc_variables import (
     calc_w_sub_t,
     calc_conv_t,
     calc_pot_temp,
+    calc_flux_conv_t,
 )
 from scipy.signal import savgol_filter
+
 # %%
 runs = ["jed0011", "jed0022", "jed0033"]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
@@ -152,10 +154,71 @@ axes[2].set_xlabel("Subsidence / K day$^{-1}$")
 axes[3].set_xlabel("Convergence / day$^{-1}$")
 axes[0].invert_yaxis()
 axes[0].set_ylim([260, 213])
-fig.tight_layout()
-fig.savefig("plots/iwp_drivers/stab_iris_temp.png", dpi=300)
+handles, labels = axes[0].get_legend_handles_labels()
+fig.legend(
+    handles,
+    labels,
+    loc="center",
+    bbox_to_anchor=(0.5, -0.05),
+    ncol=3,
+)
+fig.savefig("plots/iwp_drivers/stab_iris_temp.png", dpi=300, bbox_inches="tight")
+
+# %% calculate convergence of net flux
+f_conv ={}
+mean_rho = {}
+mean_hr = {}
+for run in runs:
+    f_conv[run] = (
+        calc_flux_conv_t(
+            (datasets[run]["rsd"] - datasets[run]["rsu"])
+            + (datasets[run]["rld"] - datasets[run]["rlu"]),
+            datasets[run]["zg"],
+        ).where(masks_clearsky[run]).mean("index")
+    )
+    mean_rho[run] = datasets[run]["rho"].where(masks_clearsky[run]).mean("index")
+    mean_hr[run] = (f_conv[run] * 86400) / (mean_rho[run] * 1004)
+# %% plot convergence of net flux
+fig, axes = plt.subplots(1, 3, figsize=(10, 6), sharey=True)
+
+for run in runs:
+    axes[0].plot(
+        f_conv[run].where(masks_clearsky[run]).mean("index"),
+        f_conv[run]["temp"],
+        label=exp_name[run],
+        color=colors[run],
+    )
+    axes[1].plot(
+        mean_rho[run],
+        mean_rho[run]["temp"],
+        label=exp_name[run],
+        color=colors[run],
+    )
+    axes[2].plot(
+        mean_hr[run],
+        mean_hr[run]["temp"],
+        label=exp_name[run],
+        color=colors[run],
+    )
 
 
+axes[0].invert_yaxis()
+axes[0].set_ylabel("Temperature / K")
+axes[0].set_xlabel("Net flux convergence / W m$^{-3}$")
+axes[1].set_xlabel("Air Density / kg m$^{-3}$")
+axes[2].set_xlabel("Heating rate / K day$^{-1}$")
+for ax in axes:
+    ax.spines[["top", "right"]].set_visible(False)
+
+handles, labels = axes[0].get_legend_handles_labels()
+fig.legend(
+    handles,
+    labels,
+    loc="center",
+    bbox_to_anchor=(0.5, -0.05),
+    ncol=3,
+)
+fig.savefig("plots/iwp_drivers/flux_conv_temp.png", dpi=300, bbox_inches="tight")
 # %%
 def calc_rel_hum(hus, ta, p):
     e_sat = 6.112 * np.exp((22.46 * (ta - 273.15)) / ((ta - 273.15) + 272.62))
@@ -163,13 +226,32 @@ def calc_rel_hum(hus, ta, p):
     return e / e_sat
 
 
+def convert_to_densiy(var, dry_air, rho_air):
+    var_dens = (var / dry_air) * rho_air
+    return var_dens
+
+
 rel_hum = {}
 spec_hum = {}
+dens = {}
 for run in runs:
     rel_hum[run] = calc_rel_hum(
         datasets[run]["hus"],
         datasets[run]["ta"],
         datasets[run]["pfull"],
+    )
+    dens[run] = convert_to_densiy(
+        datasets[run]["hus"],
+        datasets[run]["pfull"] / (287.04 * datasets[run]["ta"]),
+        1
+        - (
+            datasets[run]["cli"]
+            + datasets[run]["clw"]
+            + datasets[run]["qs"]
+            + datasets[run]["qg"]
+            + datasets[run]["qr"]
+            + datasets[run]["hus"]
+        ),
     )
     rel_hum[run] = rel_hum[run].where(masks_clearsky[run]).mean("index")
     spec_hum[run] = datasets[run]["hus"].where(masks_clearsky[run]).mean("index")
@@ -229,7 +311,7 @@ axes[0, 1].set_xscale("log")
 fig.tight_layout()
 fig.savefig("plots/iwp_drivers/humidity_temp.png", dpi=300)
 
-# %% plot ozone 
+# %% plot ozone
 fig, ax = plt.subplots(figsize=(4, 6))
 for run in runs:
     ax.plot(

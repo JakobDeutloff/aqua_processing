@@ -12,6 +12,6 @@ def read_cloudsat(year):
     # convert ot pandas
     cloudsat = cloudsat.to_pandas()
     # select tropics
-    lat_mask = (cloudsat["lat"] <= 30) & (cloudsat["lat"] >= -30)
+    lat_mask = (cloudsat["lat"] <= 20) & (cloudsat["lat"] >= -20)
 
     return cloudsat[lat_mask] 

@@ -11,10 +11,10 @@ datasets = {}
 cre_interp_mean = {}
 for run in runs:
     datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20.nc"
     )
     cre_interp_mean[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand_t.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand_t_20.nc"
     )
 
 # %% calculate masks
@@ -139,15 +139,15 @@ histograms["cloudsat"] = histograms["cloudsat"] / len(cloudsat["ice_water_path"]
 fig, ax = plt.subplots(1, 1, figsize=(8, 5))
 colors = {"jed0011": "k", "jed0022": "red", "jed0033": "orange"}
 ax.stairs(
-    histograms["cloudsat"], edges, label="CloudSat", color="k", linewidth=4, alpha=0.5
+    histograms["cloudsat"], edges, label="2C-ICE", color="k", linewidth=4, alpha=0.5
 )
 for run in runs:
     ax.stairs(histograms[run], edges, label=exp_name[run], color=colors[run])
 
 ax.legend()
 ax.set_xscale("log")
-ax.set_ylabel("P(IWP)")
-ax.set_xlabel("IWP / kg m$^{-2}$")
+ax.set_ylabel("P($I$)")
+ax.set_xlabel("$I$ / kg m$^{-2}$")
 ax.set_xlim([1e-4, 40])
 ax.spines[["top", "right"]].set_visible(False)
 fig.savefig(f"plots/feedback/{mode}/iwp_hist_rand.png", dpi=300, bbox_inches="tight")
@@ -161,8 +161,8 @@ for run in ["jed0022", "jed0033"]:
 
 ax.legend()
 ax.set_xscale("log")
-ax.set_ylabel("P(IWP)")
-ax.set_xlabel("IWP / kg m$^{-2}$")
+ax.set_ylabel("P($I$)")
+ax.set_xlabel("$I$ / kg m$^{-2}$")
 ax.set_xlim([1e-4, 40])
 ax.spines[["top", "right"]].set_visible(False)
 fig.savefig(
@@ -413,7 +413,7 @@ axes[2].set_title("IWP Change")
 
 for ax in axes:
     ax.set_xticks([0, 1, 2])
-    ax.set_yticks([-0.5, 0, 0.5, 1])
+    ax.set_yticks([-0.5, 0, 0.5])
     ax.set_xticklabels(["LW", "SW", "Net"])
     ax.spines[["top", "right"]].set_visible(False)
     ax.axhline(0, color="grey", linestyle="--", linewidth=0.8)
