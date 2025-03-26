@@ -20,10 +20,10 @@ datasets = {}
 datasets
 for run in runs:
     datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_tgrid.nc"
-    ).sel(temp=slice(213, None))
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_tgrid_20.nc"
+    ).sel(temp=slice(200, None))
     ds = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_20.nc"
     ).sel(index=slice(0, 1e6))
     # Assign all variables from ds to datasets if dim == index
     datasets[run] = datasets[run].assign(
@@ -60,15 +60,15 @@ for run in runs:
     )
 
 
-#  calcualte sub and conv from mean values
+# calcualte sub and conv from mean values
 hrs_mean = {}
 sub_mean = {}
 conv_mean = {}
 sub_mean_cont = {}
 conv_mean_cont = {}
-mean_hrs_control = hrs["jed0011"].where(masks_clearsky["jed0011"]).mean("index")
+mean_hrs_control = hrs["jed0011"].where(masks_clearsky["jed0011"]).median("index")
 for run in runs:
-    hrs_mean[run] = hrs[run].where(masks_clearsky[run]).mean("index")
+    hrs_mean[run] = hrs[run].where(masks_clearsky[run]).median("index")
     sub_mean[run] = calc_w_sub_t(hrs_mean[run]["net_hr"], hrs_mean[run]["stab"])
     sub_mean[run] = xr.DataArray(
         data=savgol_filter(sub_mean[run], window_length=11, polyorder=3),
@@ -102,13 +102,13 @@ fig, axes = plt.subplots(1, 4, figsize=(14, 6), sharey=True)
 
 for run in runs:
     axes[0].plot(
-        hrs[run]["net_hr"].where(masks_clearsky[run]).mean("index"),
+        hrs[run]["net_hr"].where(masks_clearsky[run]).median("index"),
         hrs[run]["temp"],
         label=exp_name[run],
         color=colors[run],
     )
     axes[1].plot(
-        hrs[run]["stab"].where(masks_clearsky[run]).mean("index"),
+        hrs[run]["stab"].where(masks_clearsky[run]).median("index"),
         hrs[run]["temp"],
         label=exp_name[run],
         color=colors[run],
@@ -153,7 +153,7 @@ axes[1].set_xlabel("Stability / K K$^{-1}$")
 axes[2].set_xlabel("Subsidence / K day$^{-1}$")
 axes[3].set_xlabel("Convergence / day$^{-1}$")
 axes[0].invert_yaxis()
-axes[0].set_ylim([260, 213])
+axes[0].set_ylim([260, 200])
 handles, labels = axes[0].get_legend_handles_labels()
 fig.legend(
     handles,
@@ -162,10 +162,13 @@ fig.legend(
     bbox_to_anchor=(0.5, -0.05),
     ncol=3,
 )
-fig.savefig("plots/iwp_drivers/stab_iris_temp.png", dpi=300, bbox_inches="tight")
+fig.savefig("plots/iwp_drivers/stab_iris_temp_20.png", dpi=300, bbox_inches="tight")
+
+# %%
+datasets["jed0011"]["ta"].astype(float).std('index').plot.line(x="temp", color="k", add_legend=False)
 
 # %% calculate convergence of net flux
-f_conv ={}
+f_conv = {}
 mean_rho = {}
 mean_hr = {}
 for run in runs:
@@ -174,7 +177,9 @@ for run in runs:
             (datasets[run]["rsd"] - datasets[run]["rsu"])
             + (datasets[run]["rld"] - datasets[run]["rlu"]),
             datasets[run]["zg"],
-        ).where(masks_clearsky[run]).mean("index")
+        )
+        .where(masks_clearsky[run])
+        .mean("index")
     )
     mean_rho[run] = datasets[run]["rho"].where(masks_clearsky[run]).mean("index")
     mean_hr[run] = (f_conv[run] * 86400) / (mean_rho[run] * 1004)
@@ -219,6 +224,8 @@ fig.legend(
     ncol=3,
 )
 fig.savefig("plots/iwp_drivers/flux_conv_temp.png", dpi=300, bbox_inches="tight")
+
+
 # %%
 def calc_rel_hum(hus, ta, p):
     e_sat = 6.112 * np.exp((22.46 * (ta - 273.15)) / ((ta - 273.15) + 272.62))
