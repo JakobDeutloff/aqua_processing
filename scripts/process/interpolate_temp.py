@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from src.calc_variables import calc_stability_t, calc_pot_temp, calc_heating_rates_t, calc_w_sub_t, calc_conv_t
 
 # %% load data
-run = "jed0011" #sys.argv[1]
+run = sys.argv[1]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 
 ds = xr.open_dataset(
@@ -29,7 +29,7 @@ ds = ds.drop_vars([var for var in ds.variables if "height" not in ds[var].dims])
 ds = ds.assign(zg = vgrid["zg"])
 ds = ds.assign(dzghalf = vgrid["dzghalf"])
 ds = ds.assign_coords(index = ds["index"])
-ds = ds.chunk({"index": 1e2, "height": -1})
+#ds = ds.chunk({"index": 1e3, "height": -1})
 ds = ds.astype(float)
 
 # %% determine tropopause height and clearsky
@@ -40,7 +40,7 @@ mask_trop = (ds["height"] > height_trop).load()
 
 # %% build temperature indexer
 print("Build temperature indexer")
-t_grid = np.linspace(180, 260, 100)
+t_grid = np.linspace(180, 260, 60)
 
 def interpolate_height(ta, height):
     return np.interp(t_grid, ta[~np.isnan(ta)], height[~np.isnan(ta)], left=np.nan, right=np.nan)
@@ -55,7 +55,7 @@ height_array = xr.apply_ufunc(
     vectorize=True,
     dask="parallelized",
     output_dtypes=[float],
-    dask_gufunc_kwargs={"output_sizes": {"temp": 100}},
+    dask_gufunc_kwargs={"output_sizes": {"temp": 60}},
 )
 
 with ProgressBar(): 

@@ -44,7 +44,7 @@ ax.set_xscale("log")
 ax.set_ylabel("P(IWP)")
 ax.set_xlabel("IWP / kg m$^{-2}$")
 ax.spines[["top", "right"]].set_visible(False)
-fig.savefig("plots/iwp_hist_rand.png", dpi=300)
+#fig.savefig("plots/iwp_hist_rand.png", dpi=300)
 
 # %% plot diff to control 
 fig, ax = plt.subplots(1, 1, figsize=(8, 5))
@@ -58,7 +58,7 @@ ax.set_xscale("log")
 ax.set_ylabel("P(IWP)")
 ax.set_xlabel("IWP / kg m$^{-2}$")
 ax.spines[["top", "right"]].set_visible(False)
-fig.savefig("plots/iwp_hist_rand_diff.png", dpi=300)
+#fig.savefig("plots/iwp_hist_rand_diff.png", dpi=300)
 
 # %%
 ds_2D = xr.open_mfdataset("/work/bm1183/m301049/icon-mpim/experiments/jed0011/jed0011_atm_2d_19*.nc", chunks={}).pipe(merge_grid)
