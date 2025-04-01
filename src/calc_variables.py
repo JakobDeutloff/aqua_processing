@@ -159,7 +159,7 @@ def bin_and_average_cre(ds, IWP_bins, time_bins, mask_height, std=False):
         return cre_arr, interp_cre, interp_cre_average
 
 
-def calc_connected(ds, frac_no_cloud=0.05):
+def calc_connected(ds, zg, frac_no_cloud=0.05, mean_height=11645):
     """
     defines for all profiles with ice above liquid whether
     the high and low clouds are connected (1) or not (0).
@@ -182,17 +182,23 @@ def calc_connected(ds, frac_no_cloud=0.05):
     # define liquid and ice cloud condensate
     liq = ds["clw"] + ds["qr"]
     ice = ds["cli"] + ds["qs"] + ds["qg"]
+    cloud_top = zg.sel(height=ice.argmax("height"))
+    cloud_bottom = zg.sel(height=liq.argmax("height"))
+    cloud_height = (cloud_top - cloud_bottom).mean()
 
     # define ice and liquid content needed for connectedness
-    no_ice_cloud = (ice > (frac_no_cloud * ice.max("height"))) * 1
-    no_liq_cloud = (liq > (frac_no_cloud * liq.max("height"))) * 1
-    no_cld = no_liq_cloud + no_ice_cloud
+    no_ice_cloud = (
+        ice > (frac_no_cloud * (mean_height / cloud_height) ** 7 * ice.max("height"))
+    ) * 1
+    no_liq_cloud = (
+        liq > (frac_no_cloud * (mean_height / cloud_height) ** 7 * liq.max("height"))
+    ) * 1
+    no_cld = (
+        no_liq_cloud + no_ice_cloud
+    ) - 1  # -1 for cells with not enough condensate
 
     # find all profiles with ice above liquid
     mask_both_clds = (ds["lwp"] > 1e-4) & (ds["iwp"] > 1e-4)
-
-    # prepare coordinates with liquid clouds below ice clouds for indexing in the loop
-    index_valid = ds.index[mask_both_clds]
 
     # create connectedness array
     connected = xr.DataArray(
@@ -215,10 +221,10 @@ def calc_connected(ds, frac_no_cloud=0.05):
     # Calculate the mean cloud content between the heights of maximum ice and liquid content
     cld_range_mean = no_cld.where(
         (no_cld.height >= h_ice) & (no_cld.height <= h_liq)
-    ).mean("height")
+    ).sum("height")
 
     # Determine connectedness
-    connected = xr.where(cld_range_mean < 1, 0, connected)
+    connected = xr.where(cld_range_mean < -1, 0, connected)
 
     return connected
 
@@ -240,16 +246,8 @@ def calc_IWC_cumsum(ds):
 
 def calc_heating_rates_t(rho, rs, rl, zg):
     cp = 1004  # J kg^-1 K^-1 specific heat capacity of dry air at constant pressure
-    sw_hr = (
-        (1 / (rho * cp))
-        * ((rs).diff("temp") / (zg.diff("temp").values))
-        * 86400
-    )
-    lw_hr = (
-        (1 / (rho * cp))
-        * ((rl).diff("temp") / (zg.diff("temp").values))
-        * 86400
-    )
+    sw_hr = (1 / (rho * cp)) * ((rs).diff("temp") / (zg.diff("temp").values)) * 86400
+    lw_hr = (1 / (rho * cp)) * ((rl).diff("temp") / (zg.diff("temp").values)) * 86400
     net_hr = sw_hr + lw_hr
 
     hr_arr = xr.Dataset(
@@ -275,6 +273,7 @@ def calc_heating_rates_t(rho, rs, rl, zg):
 
     return hr_arr
 
+
 def calc_flux_conv_t(r, zg):
     f_conv = (r).diff("temp") / (zg.diff("temp").values)
     f_conv.attrs = {
@@ -282,6 +281,7 @@ def calc_flux_conv_t(r, zg):
         "long_name": "Flux convergence",
     }
     return f_conv
+
 
 def calc_pot_temp(ta, p):
     kappa = 0.286
@@ -292,11 +292,12 @@ def calc_pot_temp(ta, p):
     }
     return theta
 
+
 def calc_stability_t(theta, t, zg):
     Rd = 287.05
     g = 9.81
     scaleheight = (Rd * t) / g
-    stab = scaleheight * (1/theta) * (theta.diff("temp") / zg.diff("temp")) 
+    stab = scaleheight * (1 / theta) * (theta.diff("temp") / zg.diff("temp"))
     stab.attrs = {
         "units": "1",
         "long_name": "Stability",
@@ -321,18 +322,11 @@ def calc_conv_t(wsub):
     }
     return conv
 
-def calc_heating_rates(rho, rs, rl, vgrid):
+
+def calc_heating_rates(rho, rs, rl, zg, z_var="temp"):
     cp = 1004  # J kg^-1 K^-1 specific heat capacity of dry air at constant pressure
-    sw_hr = (
-        (1 / (rho * cp))
-        * ((rs).diff("height") / (vgrid["zg"].diff("height")))
-        * 86400
-    )
-    lw_hr = (
-        (1 / (rho * cp))
-        * ((rl).diff("height") / (vgrid["zg"].diff("height")))
-        * 86400
-    )
+    sw_hr = (1 / (rho * cp)) * ((rs).diff(z_var) / (zg.diff(z_var))) * 86400
+    lw_hr = (1 / (rho * cp)) * ((rl).diff(z_var) / (zg.diff(z_var))) * 86400
     net_hr = sw_hr + lw_hr
 
     hr_arr = xr.Dataset(
@@ -355,6 +349,7 @@ def calc_heating_rates(rho, rs, rl, vgrid):
         "units": "K/day",
         "long_name": "Net heating rate",
     }
+    hr_arr["temp"] = (rho["temp"][1:].values + rho["temp"][:-1].values) / 2
 
     return hr_arr
 
@@ -368,10 +363,11 @@ def calc_cf(ds):
     return cf
 
 
-def calc_stability(ta, vgrid):
+def calc_stability(ta, zg, z_var="temp"):
     g = -9.81
     cp = 1004
-    stab = (g / cp) - (ta.diff("height") / vgrid["zg"].diff("height").values)
+    stab = (g / cp) - (ta.diff(z_var) / zg.diff(z_var).values)
+    stab["temp"] = (ta["temp"][1:].values + ta["temp"][:-1].values) / 2
     stab.attrs = {
         "units": "K m^-1",
         "long_name": "Stability",
@@ -388,10 +384,11 @@ def calc_w_sub(net_hr, stab):
     return wsub
 
 
-def calc_conv(wsub, vgrid):
-    conv = wsub.diff("height") / (
-        vgrid["zghalf"].sel(height_2=wsub["height"]).diff("height").values
+def calc_conv(wsub, zg, z_var="temp"):
+    conv = -wsub.diff(z_var) / (
+        zg.interp(temp=wsub["temp"], method="linear").diff(z_var).values
     )
+    conv["temp"] = (wsub["temp"][1:].values + wsub["temp"][:-1].values) / 2
     conv.attrs = {
         "units": "day^-1",
         "long_name": "Convergence",

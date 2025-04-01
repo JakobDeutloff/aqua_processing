@@ -3,6 +3,7 @@ import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
 from src.grid_helpers import merge_grid
+import matplotlib as mpl
 
 # %%
 runs = ["jed0011", "jed0022", "jed0033"]
@@ -17,23 +18,32 @@ for run in runs:
 
 # %% calculate binned precip
 pr_binned = {}
+pr_mean = {}
+pr_std = {}
 lat_bins = np.arange(-90, 90.5, 0.5)
 lat_points = (lat_bins[:-1] + lat_bins[1:]) / 2
 for run in runs:
-    pr_binned[run] = datasets[run]["pr"].mean('time').groupby_bins(datasets[run]['clat'], lat_bins).mean()
-
+    pr_binned[run] = datasets[run]["pr"].groupby_bins(datasets[run]['clat'], lat_bins).mean().compute() * 86400
+    pr_mean[run] = pr_binned[run].mean('time')
+    pr_std[run] = pr_binned[run].std('time')
 # %% plot binned precip
 fig, ax = plt.subplots()
 
-for run in runs:
-    ax.plot(lat_points, pr_binned[run], label=exp_name[run], color=colors[run])
+for run in ['jed0022', 'jed0033', 'jed0011']:
+    ax.plot(lat_points, pr_mean[run], label=exp_name[run], color=colors[run])
+    ax.fill_between(lat_points, pr_mean[run] - pr_std[run], pr_mean[run] + pr_std[run], alpha=0.2, color=colors[run])
 
 ax.spines[['top', 'right']].set_visible(False)
 ax.set_xlabel("Latitude")
-ax.set_ylabel("Precipitation / mm/day")
-ax.legend()
+ax.set_ylabel("Precipitation / mm day$^{-1}$")
 ax.set_xlim([-30, 30])
-fig.savefig('plots/precip.png', dpi=300, bbox_inches='tight')
+
+handles, labels = ax.get_legend_handles_labels()
+handles.append(mpl.patches.Patch(color='grey', alpha=0.2))
+labels.append(r'$\pm  \sigma$')
+ax.legend(handles=handles, labels=labels)
+
+fig.savefig('plots/publication/precip.png', dpi=300, bbox_inches='tight')
 
 # %% calculate hydrological sensitivity
 t_deltas = {'jed0022': 4, 'jed0033': 2}

@@ -11,10 +11,10 @@ datasets = {}
 cre_interp_mean = {}
 for run in runs:
     datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20_conn.nc"
     )
     cre_interp_mean[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand_t_20.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand_t_20_conn.nc"
     )
 
 # %% calculate masks
@@ -71,7 +71,7 @@ ax.spines[["top", "right"]].set_visible(False)
 ax.set_xlabel("$I$  / kg m$^{-2}$")
 ax.set_ylabel("$C(I)$  / W m$^{-2}$")
 ax.set_xscale("log")
-fig.savefig(f"plots/feedback/{mode}/cre_iwp.png", dpi=300, bbox_inches="tight")
+#fig.savefig(f"plots/feedback/{mode}/cre_iwp.png", dpi=300, bbox_inches="tight")
 
 # %% plot CRE diff
 fig, axes = plt.subplots(3, 1, figsize=(7, 7), sharex=True)
@@ -114,7 +114,7 @@ for ax in axes:
 axes[0].set_ylabel(r"$\Delta C_{\mathrm{lw}}(I)$  / W m$^{-2}$")
 axes[1].set_ylabel(r"$\Delta C_{\mathrm{sw}}(I)$  / W m$^{-2}$")
 axes[2].set_ylabel(r"$\Delta C_{\mathrm{net}}(I)$  / W m$^{-2}$")
-fig.savefig(f"plots/feedback/{mode}/cre_iwp_diff.png", dpi=300, bbox_inches="tight")
+#fig.savefig(f"plots/feedback/{mode}/cre_iwp_diff.png", dpi=300, bbox_inches="tight")
 
 # %% read cloudsat
 cloudsat_raw = read_cloudsat("2009")
@@ -427,7 +427,7 @@ handles = [
     plt.Line2D([0], [0], color="grey", marker="o", linestyle="none"),
 ]
 fig.legend(handles, labels, bbox_to_anchor=[0.62, 0], frameon=True, ncols=2)
-fig.savefig(f"plots/feedback/{mode}/feedback.png", dpi=300, bbox_inches="tight")
+#fig.savefig(f"plots/feedback/{mode}/feedback.png", dpi=300, bbox_inches="tight")
 
 
 # %%

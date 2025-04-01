@@ -131,7 +131,7 @@ for run in runs:
     )     
 
 
-# %% plot all heatingrates
+# %% define plotting functions
 
 def plot_heatingrates(hrs_binned_net, hrs_binned_lw, hrs_binned_sw, cf_binned):
     fig, axes = plt.subplots(3, 3, figsize=(16, 16), sharex=True, sharey=True)
@@ -179,7 +179,7 @@ def plot_heatingrates(hrs_binned_net, hrs_binned_lw, hrs_binned_sw, cf_binned):
         ax.set_xscale("log")
         ax.set_xlim(iwp_bins[0], iwp_bins[-1])
         ax.invert_yaxis()
-        ax.set_ylim([260, 210])
+        ax.set_ylim([260, 190])
 
 
     fig.text(0.07, 0.77, "Control", fontsize=14, rotation=90)
@@ -243,7 +243,7 @@ def plot_diff_heatingrates(hrs_binned_net, hrs_binned_lw, hrs_binned_sw, cf_binn
         ax.set_xscale("log")
         ax.set_xlim(iwp_bins[0], iwp_bins[-1])
         ax.invert_yaxis()
-        ax.set_ylim([260, 210])
+        ax.set_ylim([260, 190])
 
     for ax in axes[:, 0]:
         ax.set_ylabel("Temperature / K")
@@ -280,7 +280,7 @@ fig.savefig(
 
 
 
-# %%
+# %% plot diff heatingrates
 fig, axes = plot_diff_heatingrates(hrs_binned_net, hrs_binned_lw, hrs_binned_sw, cf_binned)
 fig.savefig(
     "plots/heating_rates/heating_rates_temp_diff_all.png", dpi=300, bbox_inches="tight"

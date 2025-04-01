@@ -16,8 +16,14 @@ for run in runs:
         f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_20.nc"
     )
 
-vgrid = xr.open_dataset("/work/bm1183/m301049/icon-mpim/experiments/jed0001/atm_vgrid_angel.nc")
-# %% calculate IWP and LWP 
+vgrid = (
+    xr.open_dataset(
+        "/work/bm1183/m301049/icon-mpim/experiments/jed0001/atm_vgrid_angel.nc"
+    )
+    .mean("ncells")
+    .rename({"height_2": "height", "height": "height_2"})
+)
+# %% calculate IWP and LWP
 for run in runs:
     datasets[run] = datasets[run].assign(
         iwp=datasets[run]["clivi"] + datasets[run]["qsvi"] + datasets[run]["qgvi"]
@@ -30,13 +36,12 @@ for run in runs:
 
 # %% calculate cumsum of IWC
 for run in runs:
-    datasets[run] = datasets[run].assign(dzghalf=vgrid["dzghalf"].mean("ncells"))
+    datasets[run] = datasets[run].assign(dzghalf=vgrid["dzghalf"])
     datasets[run] = datasets[run].assign(iwc_cumsum=calc_IWC_cumsum(datasets[run]))
 
 # %% calculate connectedness
 for run in runs:
-    if "conn" not in datasets[run]:
-        datasets[run] = datasets[run].assign(conn=calc_connected(datasets[run]))
+    datasets[run] = datasets[run].assign(conn=calc_connected(datasets[run], vgrid["zg"]))
 # %% calculate cloud top
 for run in runs:
     datasets[run]["hc_top_temperature"], datasets[run]["hc_top_pressure"] = (
@@ -54,17 +59,19 @@ for run in runs:
 
 # %% assign local time
 for run in runs:
-    datasets[run] = datasets[run].assign(time_local=lambda d: d.time.dt.hour + (d.clon / 15))
-    datasets[run]["time_local"] = datasets[run]["time_local"].where(
-        datasets[run]["time_local"] < 24, datasets[run]["time_local"] - 24
-    ).where(
-        datasets[run]["time_local"] > 0, datasets[run]["time_local"] + 24
+    datasets[run] = datasets[run].assign(
+        time_local=lambda d: d.time.dt.hour + (d.clon / 15)
+    )
+    datasets[run]["time_local"] = (
+        datasets[run]["time_local"]
+        .where(datasets[run]["time_local"] < 24, datasets[run]["time_local"] - 24)
+        .where(datasets[run]["time_local"] > 0, datasets[run]["time_local"] + 24)
     )
     datasets[run]["time_local"].attrs = {"units": "h", "long_name": "Local time"}
 
 # %% save processed data
 for run in runs:
-    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20.nc"
+    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20_conn.nc"
     if os.path.exists(path):
         os.remove(path)
     datasets[run].to_netcdf(path)
