@@ -18,21 +18,16 @@ for run in runs:
     )
 
 # %% calculate masks
-mode = "temp_narrow"
+mode = "const_lc"
 masks_height = {}
 for run in runs:
-    if mode == "temperature":
-        masks_height[run] = datasets[run]["hc_top_temperature"] < (273.15 - 35)
-    elif mode == "pressure":
+    if mode == "pressure":
         masks_height[run] = datasets[run]["hc_top_pressure"] < 350
     elif mode == "raw":
         masks_height[run] = True
-    elif mode == "temp_narrow":
-        masks_height[run] = (
-            (datasets[run]["hc_top_temperature"] < (273.15 - 35))
-            & (datasets[run]["clat"] < 20)
-            & (datasets[run]["clat"] > -20)
-        )
+    else:
+        masks_height[run] = datasets[run]["hc_top_temperature"] < (273.15 - 35)
+
 # %% plot CRE
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.axhline(0, color="grey", linestyle="--", linewidth=0.8)
@@ -71,7 +66,7 @@ ax.spines[["top", "right"]].set_visible(False)
 ax.set_xlabel("$I$  / kg m$^{-2}$")
 ax.set_ylabel("$C(I)$  / W m$^{-2}$")
 ax.set_xscale("log")
-#fig.savefig(f"plots/feedback/{mode}/cre_iwp.png", dpi=300, bbox_inches="tight")
+fig.savefig(f"plots/feedback/{mode}/cre_iwp.png", dpi=300, bbox_inches="tight")
 
 # %% plot CRE diff
 fig, axes = plt.subplots(3, 1, figsize=(7, 7), sharex=True)
@@ -114,7 +109,7 @@ for ax in axes:
 axes[0].set_ylabel(r"$\Delta C_{\mathrm{lw}}(I)$  / W m$^{-2}$")
 axes[1].set_ylabel(r"$\Delta C_{\mathrm{sw}}(I)$  / W m$^{-2}$")
 axes[2].set_ylabel(r"$\Delta C_{\mathrm{net}}(I)$  / W m$^{-2}$")
-#fig.savefig(f"plots/feedback/{mode}/cre_iwp_diff.png", dpi=300, bbox_inches="tight")
+fig.savefig(f"plots/feedback/{mode}/cre_iwp_diff.png", dpi=300, bbox_inches="tight")
 
 # %% read cloudsat
 cloudsat_raw = read_cloudsat("2009")
@@ -427,7 +422,7 @@ handles = [
     plt.Line2D([0], [0], color="grey", marker="o", linestyle="none"),
 ]
 fig.legend(handles, labels, bbox_to_anchor=[0.62, 0], frameon=True, ncols=2)
-#fig.savefig(f"plots/feedback/{mode}/feedback.png", dpi=300, bbox_inches="tight")
+fig.savefig(f"plots/feedback/{mode}/feedback.png", dpi=300, bbox_inches="tight")
 
 
 # %%

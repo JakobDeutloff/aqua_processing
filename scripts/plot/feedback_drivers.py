@@ -6,34 +6,28 @@ import numpy as np
 # %% load data
 runs = ["jed0011", "jed0022", "jed0033"]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
+colors = {"jed0011": "k", "jed0022": "red", "jed0033": "orange"}
+iwp_bins = np.logspace(-4, np.log10(40), 51)
 datasets = {}
 cre_interp_mean = {}
 for run in runs:
     datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20_conn.nc"
     )
     cre_interp_mean[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand_t_20.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand_t_20_conn.nc"
     )
 
 # %% calculate masks
-mode = "temp_narrow"
-iwp_bins = np.logspace(-4, np.log10(40), 51)
-colors = {"jed0011": "k", "jed0022": "red", "jed0033": "orange"}
+mode = "const_lc"
 masks_height = {}
 for run in runs:
-    if mode == "temperature":
-        masks_height[run] = datasets[run]["hc_top_temperature"] < (273.15 - 35)
-    elif mode == "pressure":
+    if mode == "pressure":
         masks_height[run] = datasets[run]["hc_top_pressure"] < 350
     elif mode == "raw":
         masks_height[run] = True
-    elif mode == "temp_narrow":
-        masks_height[run] = (
-            (datasets[run]["hc_top_temperature"] < (273.15 - 35))
-            & (datasets[run]["clat"] < 20)
-            & (datasets[run]["clat"] > -20)
-        )
+    else:
+        masks_height[run] = datasets[run]["hc_top_temperature"] < (273.15 - 35)
 # %% investigate low cloud fraction
 fig, ax = plt.subplots()
 

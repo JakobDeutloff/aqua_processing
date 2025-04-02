@@ -25,11 +25,12 @@ v_sq = {}
 q_sq = {}
 cov = {}
 for run in runs:
-    mean_v = datasets[run]['va'].mean('index')
-    mean_q = datasets[run]['hus'].mean('index')
-    v_sq[run] = np.abs(datasets[run]['va'] - mean_v)
-    q_sq[run] = np.abs(datasets[run]['hus'] - mean_q) 
-    cov[run] =((datasets[run]['va'] - mean_v)) * ((datasets[run]['hus'] - mean_q))
+    mask = datasets[run]['clat'] < 0 
+    mean_v = datasets[run]['va'].where(mask).mean('index')
+    mean_q = datasets[run]['hus'].where(mask).mean('index')
+    v_sq[run] = np.abs(datasets[run]['va'].where(mask) - mean_v)
+    q_sq[run] = np.abs(datasets[run]['hus'].where(mask) - mean_q) 
+    cov[run] =((datasets[run]['va'].where(mask) - mean_v)) * ((datasets[run]['hus'].where(mask) - mean_q))
 
 # %% plot variances
 fig, axes = plt.subplots(1, 3, figsize=(15, 7), sharey=True)
