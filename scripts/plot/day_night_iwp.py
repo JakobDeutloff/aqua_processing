@@ -72,6 +72,7 @@ axes[0].set_ylabel("$P(I)$")
 axes[0].set_title("Day")
 axes[1].set_title("Night")
 axes[1].legend()
+fig.savefig('plots/variability/iwp_day_night.png', dpi=300, bbox_inches='tight')
 # %% plot iwp hists time of day 
 fig, axes = plt.subplots(1, 4, figsize=(20, 5), sharey=True)
 for run in ['jed0033', 'jed0022']:
@@ -91,6 +92,7 @@ axes[1].set_title("Noon")
 axes[2].set_title("Evening")
 axes[3].set_title("Midnight")
 axes[3].legend()
+fig.savefig('plots/variability/iwp_time_of_day.png', dpi=300, bbox_inches='tight')
 
 # %% plot iwp hists south north 
 hists_north = {}
@@ -117,5 +119,6 @@ for ax in axes:
     ax.axhline(0, color="black", lw=0.5)
 axes[0].set_title("North")
 axes[1].set_title("South")
+fig.savefig('plots/variability/iwp_north_south.png', dpi=300, bbox_inches='tight')
 
 # %%

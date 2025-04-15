@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 
 # %%
 ds = xr.open_dataset(
-    "/work/bm1183/m301049/icon_hcap_data/control/production/jed0011_atm_2d_hp.nc"
+    "/work/bm1183/m301049/icon_hcap_data/plus4K/production/jed0022_atm_2d_hp.nc"
 ).pipe(egh.attach_coords)
 iwp = ds["clivi"] + ds["qsvi"] + ds["qgvi"]
-iwp_trop = iwp.where((ds.lat < 30) & (ds.lat > -30), drop=True)
+iwp_trop = iwp.where((ds.lat < 20) & (ds.lat > -20), drop=True)
 # %%
 iwp_stacked = iwp_trop.stack(idx=("time", "cell")).reset_index("idx")
 # %% get random samples
@@ -59,21 +59,21 @@ fig.savefig("plots/iwp_dist_sampling_error.png", dpi=300)
 # %%
 timeslices = {
     "5day": [
-        slice("1979-07-01", "1979-07-05"),
-        slice("1979-07-06", "1979-07-10"),
-        slice("1979-07-11", "1979-07-15"),
-        slice("1979-07-16", "1979-07-20"),
-        slice("1979-07-21", "1979-07-25"),
-        slice("1979-07-26", "1979-07-31"),
+        slice("1979-09-01", "1979-09-05"),
+        slice("1979-09-06", "1979-09-10"),
+        slice("1979-09-11", "1979-09-15"),
+        slice("1979-09-16", "1979-09-20"),
+        slice("1979-09-21", "1979-09-25"),
+        slice("1979-09-26", "1979-09-29"),
     ],
     "10day": [
-        slice("1979-07-01", "1979-07-10"),
-        slice("1979-07-11", "1979-07-20"),
-        slice("1979-07-21", "1979-07-30"),
+        slice("1979-08-31", "1979-09-09"),
+        slice("1979-09-10", "1979-09-19"),
+        slice("1979-09-20", "1979-09-29"),
     ],
     "15day": [
-        slice("1979-07-01", "1979-07-15"),
-        slice("1979-07-16", "1979-07-31"),
+        slice("1979-08-31", "1979-09-15"),
+        slice("1979-09-16", "1979-09-29"),
     ],
 }
 
@@ -126,6 +126,6 @@ for ax in axes.flatten():
 for ax in axes[-1, :]:
     ax.set_xlabel("$I$ / kg m$^{-2}$")
 
-fig.savefig("plots/iwp_dist_variability.png", dpi=300)
+fig.savefig("plots/iwp_dist_variability_4K.png", dpi=300, bbox_inches='tight')
 
 # %%
