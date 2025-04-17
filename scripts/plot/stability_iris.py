@@ -8,6 +8,7 @@ from src.calc_variables import (
     calc_w_sub,
     calc_conv,
 )
+from scipy.stats import linregress
 
 # %% load data
 runs = ["jed0011", "jed0022", "jed0033"]
@@ -16,8 +17,8 @@ colors = {"jed0011": "k", "jed0022": "r", "jed0033": "orange"}
 datasets = {}
 for run in runs:
     datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample.nc"
-    ).sel(index=slice(0, 1e5))
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_20.nc"
+    ).sel(index=slice(0, 1e6))
 vgrid = (
     xr.open_dataset(
         "/work/bm1183/m301049/icon-mpim/experiments/jed0001/atm_vgrid_angel.nc"
@@ -216,6 +217,74 @@ for ax in axes:
 axes[1].set_ylim([0, 16])
 axes[1].set_xlim([0.4e-8, 2e-7])
 fig.savefig('plots/iwp_drivers/ozone_height.png', dpi=300)
+
+
+# %% calculate real clearsky convergence 
+conv_real = {}
+for run in runs: 
+    conv_real[run] = (
+        (
+            datasets[run]["wa"].astype(float).diff("height_2")
+            / vgrid["zghalf"][:-1].astype(float).diff("height_2").values
+        )
+        .rename({"height_2": "height"})
+    )
+
+# %% plot convergence profiles 
+fig, axes = plt.subplots(1, 2, figsize=(6, 6), sharey=True)
+for run in runs:
+    axes[0].plot(
+            datasets[run]["wa"].where(masks_clearsky[run]).mean("index"),
+            vgrid['zghalf'][:-1]/1e3,
+            label=exp_name[run],
+            color=colors[run],
+    )
+    axes[1].plot( 
+            conv_real[run].where(masks_clearsky[run]).mean("index")*86400,
+            vgrid['zg'].sel(height=conv_real[run]['height'])/1e3,
+            label=exp_name[run],
+            color=colors[run],
+    )
+for ax in axes:
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.set_ylim([0, 20])
+
+axes[0].set_ylabel("Height / km")
+axes[0].set_xlabel("Vertical velocity / m s$^{-1}$")
+axes[1].set_xlabel("Convergence / day$^{-1}$")
+
+
+# %% calculate maxima of convergence 
+max_conv = {}
+for run in runs:
+    max_conv[run] = (
+        conv_real[run].where(masks_clearsky[run] & (vgrid['zg']<20e3))
+        .mean(dim="index").max() * 86400
+    )
+
+# %% regress maximum convergence against Ts and plot
+delta_T = {
+    "jed0011": 0,
+    "jed0022": 4,
+    "jed0033": 2,
+}
+results = linregress(
+    np.array(list(delta_T.values())),
+    np.array([max_conv[run].values for run in runs]),
+)
+fig, ax = plt.subplots(figsize=(4, 6))
+ax.plot(
+    np.array(list(delta_T.values())),
+    np.array([max_conv[run].values for run in runs]),
+    "o",
+    color="k",
+)
+ax.plot(
+    np.array(list(delta_T.values())),
+    results.intercept + results.slope * np.array(list(delta_T.values())),
+    color="r",
+)
+
 
 
 # %%

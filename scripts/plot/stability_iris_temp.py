@@ -377,31 +377,33 @@ for run in runs:
 fig, axes = plt.subplots(1, 3, figsize=(10, 6), sharey=True)
 
 for run in runs:
+
     axes[0].plot(
-        f_conv[run].where(masks_clearsky[run]).mean("index"),
-        f_conv[run]["temp"],
-        label=exp_name[run],
-        color=colors[run],
-    )
-    axes[1].plot(
-        mean_rho[run],
-        mean_rho[run]["temp"],
-        label=exp_name[run],
-        color=colors[run],
-    )
-    axes[2].plot(
         mean_hr[run],
         mean_hr[run]["temp"],
         label=exp_name[run],
         color=colors[run],
     )
+    axes[2].plot(
+        mean_rho[run],
+        mean_rho[run]["temp"],
+        label=exp_name[run],
+        color=colors[run],
+    )
+    axes[1].plot(
+        f_conv[run].where(masks_clearsky[run]).mean("index"),
+        f_conv[run]["temp"],
+        label=exp_name[run],
+        color=colors[run],
+    )
+
 
 
 axes[0].invert_yaxis()
 axes[0].set_ylabel("Temperature / K")
-axes[0].set_xlabel("Net flux divergence / W m$^{-3}$")
-axes[1].set_xlabel("Air Density / kg m$^{-3}$")
-axes[2].set_xlabel("Heating rate / K day$^{-1}$")
+axes[1].set_xlabel("Net flux divergence / W m$^{-3}$")
+axes[2].set_xlabel("Air Density / kg m$^{-3}$")
+axes[0].set_xlabel("Heating rate / K day$^{-1}$")
 for ax in axes:
     ax.spines[["top", "right"]].set_visible(False)
 

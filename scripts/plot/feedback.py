@@ -141,6 +141,7 @@ for run in runs:
 
 ax.legend()
 ax.set_xscale("log")
+ax.set_ylim(0, 0.02)
 ax.set_ylabel("P($I$)")
 ax.set_xlabel("$I$ / kg m$^{-2}$")
 ax.set_xlim([1e-4, 40])
