@@ -13,7 +13,7 @@ exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 datasets = {}
 for run in runs:
     datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_20.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20_conn.nc"
     )
 
 vgrid = (
@@ -45,7 +45,7 @@ for run in runs:
 # %% calculate cloud top
 for run in runs:
     datasets[run]["hc_top_temperature"], datasets[run]["hc_top_pressure"] = (
-        calculate_hc_temperature(datasets[run], IWP_emission=8.73e-3)
+        calculate_hc_temperature(datasets[run], IWP_emission=0.06)
     )
 # %% calculate masks
 for run in runs:
