@@ -10,16 +10,16 @@ import gc
 import dask.array as da
 
 
-def get_coarse_time(first, last, path):
+def get_coarse_time(list):
     """
     Build new time axis with 6h frequency
     """
-    ds_first = xr.open_dataset(path + first, chunks={})
-    ds_last = xr.open_dataset(path + last, chunks={})
+    ds_first = xr.open_dataset(list[0], chunks={})
+    ds_last = xr.open_dataset(list[-1], chunks={})
     time = pd.date_range(
-        start=ds_first.isel(time=1).time.values,
+        start=ds_first.isel(time=0).time.values,
         end=ds_last.isel(time=-1).time.values,
-        freq="6h",
+        freq="1d",
     )
     return time
 
@@ -41,7 +41,7 @@ def coarsen_ds(ds_list, time):
         print("Processing " + file)
         ds = xr.open_dataset(file, chunks={})
         time_subset = time[(time >= ds.time.values[0]) & (time <= ds.time.values[-1])]
-        ds_coarse = ds.sel(time=time_subset)
+        ds_coarse = ds.sel(time=time_subset, method="nearest")
         with ProgressBar():
             ds_coarse.to_netcdf(file[:-3] + "_coarse.nc")
             os.remove(file)
