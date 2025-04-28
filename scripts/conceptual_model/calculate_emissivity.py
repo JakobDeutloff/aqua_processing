@@ -3,35 +3,46 @@ from scipy.optimize import least_squares
 import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
-from src.calc_variables import calculate_hc_temperature, calc_IWC_cumsum
+import pandas as pd
+import pickle
+import sys
+import os
 
 # %%
-runs = ["jed0011", "jed0022", "jed0033"]
+# Set CWD to PYTHONPATH
+pythonpath = os.environ.get("PYTHONPATH", "")
+if pythonpath:
+    os.chdir(pythonpath)
+    print(f"Working directory set to: {os.getcwd()}")
+else:
+    print("PYTHONPATH is not set.")
+
+# %%
+run = sys.argv[1]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 colors = {'jed0011': 'k', 'jed0022': 'r', 'jed0033': 'orange'}
-datasets = {}
-for run in runs:
-    datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20_conn.nc"
-    ).sel(index=slice(None, 1e6))
+ds = xr.open_dataset(
+    f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20_conn.nc"
+).sel(index=slice(None, 1e6))
 
+# %% initialize dataset for new variables
+lw_vars = xr.Dataset()
+mean_lw_vars = pd.DataFrame()
 
-# %% calculate hc top temperature
-run = 'jed0022'
-hc_top_temp, hc_top_pressure = calculate_hc_temperature(datasets[run], 0.06)
 
 # %% mask for parameterization
-mask = (hc_top_temp < 273 - 35) & ~datasets[run]["mask_low_cloud"]
+mask = (ds['hc_top_temperature'] < 273 - 35) & ~ds["mask_low_cloud"]
 
 # %% calculate high cloud emissivity
 sigma = 5.67e-8  # W m-2 K-4
-LW_out_as = datasets[run]["rlut"]
-LW_out_cs = datasets[run]["rlutcs"]
-rad_hc = hc_top_temp**4 * sigma
+LW_out_as = ds["rlut"]
+LW_out_cs = ds["rlutcs"]
+rad_hc = ds['hc_top_temperature']**4 * sigma
 hc_emissivity = (LW_out_as - LW_out_cs) / (rad_hc - LW_out_cs)
 hc_emissivity = xr.where(
     (hc_emissivity < -0.1) | (hc_emissivity > 1.5), np.nan, hc_emissivity
 )
+lw_vars["high_cloud_emissivity"] = hc_emissivity
 
 # %% aveage over IWP bins
 IWP_bins = np.logspace(-4, 1, num=50)
@@ -39,21 +50,24 @@ IWP_points = (IWP_bins[1:] + IWP_bins[:-1]) / 2
 mean_hc_emissivity = (
     hc_emissivity.where(mask)
     .groupby_bins(
-        datasets[run]["iwp"],
+        ds["iwp"],
         IWP_bins,
         labels=IWP_points,
     )
     .mean()
 )
 mean_hc_temp = (
-    hc_top_temp.where(mask)
+    ds['hc_top_temperature'].where(mask)
     .groupby_bins(
-        datasets[run]["iwp"],
+        ds["iwp"],
         IWP_bins,
         labels=IWP_points,
     )
     .mean()
 )
+mean_lw_vars.index = IWP_points
+mean_lw_vars.index.name = "IWP"
+mean_lw_vars["binned_emissivity"] = mean_hc_emissivity
 
 
 # %% fit logistic function to mean high cloud emissivity
@@ -83,7 +97,7 @@ logistic_curve = logistic(res.x, np.log10(IWP_points))
 fig, axes = plt.subplots(2, 1, figsize=(8, 8))
 axes[0].plot(IWP_points, mean_hc_emissivity)
 axes[0].scatter(
-    datasets[run]["iwp"].where(mask).sel(index=slice(0, 1e5)),
+    ds["iwp"].where(mask).sel(index=slice(0, 1e5)),
     hc_emissivity.where(mask).sel(index=slice(0, 1e5)),
     s=1,
     color="k",
@@ -95,8 +109,8 @@ axes[0].axhline(1, color="green", linestyle="--")
 
 axes[1].plot(IWP_points, mean_hc_temp)
 axes[1].scatter(
-    datasets[run]["iwp"].where(mask).sel(index=slice(0, 1e5)),
-    hc_top_temp.where(mask).sel(index=slice(0, 1e5)),
+    ds["iwp"].where(mask).sel(index=slice(0, 1e5)),
+    ds['hc_top_temperature'].where(mask).sel(index=slice(0, 1e5)),
     s=1,
     color="k",
     alpha=0.5,
@@ -105,4 +119,12 @@ axes[1].scatter(
 for ax in axes:
     ax.set_xscale("log")
     ax.set_xlim(1e-4, 1e1)
+
+# %% save coefficients as pkl file
+lw_vars.to_netcdf(f"data/{run}_lw_vars.nc")
+with open(f"data/params/{run}_hc_emissivity_params.pkl", "wb") as f:
+    pickle.dump(np.array([1., res.x[0], res.x[1]]), f)
+with open(f"data/{run}_lw_vars_mean.pkl", "wb") as f:
+    pickle.dump(mean_lw_vars, f)
+
 # %%

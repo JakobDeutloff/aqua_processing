@@ -6,23 +6,30 @@ import numpy as np
 import pandas as pd
 import os
 import pickle
+import sys
 
 # %%
-runs = ["jed0011", "jed0022", "jed0033"]
+# Set CWD to PYTHONPATH
+pythonpath = os.environ.get("PYTHONPATH", "")
+if pythonpath:
+    os.chdir(pythonpath)
+    print(f"Working directory set to: {os.getcwd()}")
+else:
+    print("PYTHONPATH is not set.")
+
+# %%
+run = sys.argv[1]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
-colors = {"jed0011": "k", "jed0022": "r", "jed0033": "orange"}
-datasets = {}
-for run in runs:
-    datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20_conn.nc"
-    ).sel(index=slice(None, 1e6))
+colors = {'jed0011': 'k', 'jed0022': 'r', 'jed0033': 'orange'}
+ds = xr.open_dataset(
+    f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20_conn.nc"
+).sel(index=slice(None, 1e6))
 
 # %% initialize datasets
 sw_vars = xr.Dataset()
 mean_sw_vars = pd.DataFrame()
 
 # %% set mask
-ds = datasets["jed0011"]
 mask_parameterisation = ds["mask_height"] & ~ds["mask_low_cloud"]
 
 # %% calculate high cloud albedo
@@ -148,12 +155,9 @@ ax.set_xlim(1e-4, 1e1)
 plt.show()
 
 # %% save coefficients as pkl file
-path = "/home/m/m301049/aqua_processing/"
-
-sw_vars.to_netcdf(path + "data/sw_vars.nc")
-with open(path + "data/params/hc_albedo_params.pkl", "wb") as f:
+sw_vars.to_netcdf(f"data/{run}_sw_vars.nc")
+with open(f"data/params/{run}_hc_albedo_params.pkl", "wb") as f:
     pickle.dump(res.x, f)
-with open(path + "data/sw_vars_mean.pkl", "wb") as f:
+with open(f"data/{run}_sw_vars_mean.pkl", "wb") as f:
     pickle.dump(mean_sw_vars, f)
 
-# %%

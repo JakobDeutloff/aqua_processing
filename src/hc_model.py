@@ -99,7 +99,7 @@ def calc_hc_albedo(IWP, alpha_hc_params):
     return fitted_vals
 
 
-def calc_hc_emissivity(IWP, em_hc_params):
+def calc_hc_emissivity(IWP, em_hc_params, prescribed_hc_em=None):
     """
     Calculates the high-cloud emissivity.
 
@@ -115,7 +115,11 @@ def calc_hc_emissivity(IWP, em_hc_params):
     fitted_vals: array-like
         High cloud emissivity.
     """
-    fitted_vals = logistic(np.log10(IWP), *em_hc_params, 0)
+    
+    if prescribed_hc_em is not None:
+        fitted_vals = prescribed_hc_em.values.squeeze()
+    else:
+        fitted_vals = logistic(np.log10(IWP), *em_hc_params, 0)
     return fitted_vals
 
 
@@ -150,7 +154,7 @@ def calc_alpha_t(
     """
     avg_value = lc_fraction * albedo_l + (1 - lc_fraction) * albedo_cs
     if prescribed_lc_quantities is not None:
-        avg_value = prescribed_lc_quantities["a_t"]
+        avg_value = prescribed_lc_quantities["a_t"].values
     return avg_value
 
 
@@ -192,7 +196,7 @@ def calc_R_t(
     h2o_correction = c_h20_params.slope * np.log10(IWP) + c_h20_params.intercept
     avg_value = lc_fraction * R_l + (1 - lc_fraction) * R_cs + h2o_correction
     if prescribed_lc_quantities is not None:
-        avg_value = prescribed_lc_quantities["R_t"]
+        avg_value = prescribed_lc_quantities["R_t"].values
     return avg_value
 
 
@@ -250,6 +254,7 @@ def run_model(
     connectedness,
     parameters,
     prescribed_lc_quantities=None,
+    prescribed_hc_em=None,
 ):
     """
     Runs the HC Model with given input data and parameters.
@@ -308,7 +313,7 @@ def run_model(
 
     # calculate radiative properties of high clouds
     alpha_hc = calc_hc_albedo(IWP_points, parameters["alpha_hc"])
-    em_hc = calc_hc_emissivity(IWP_points, parameters["em_hc"])
+    em_hc = calc_hc_emissivity(IWP_points, parameters["em_hc"], prescribed_hc_em)
 
     # calculate HCRE
     SW_cre = hc_sw_cre(alpha_hc, alpha_t, parameters["SW_in"])
