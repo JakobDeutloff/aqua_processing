@@ -56,7 +56,7 @@ def subsample_file(file, exp_name, number=0):
     ds = (
         xr.open_dataset(
             file,
-            chunks={"height":-1},
+            chunks={"height": -1},
         )
         .pipe(merge_grid)
         .pipe(fix_time)
@@ -99,21 +99,36 @@ def subsample_file(file, exp_name, number=0):
     gc.collect()
 
 
-def get_random_coords(run, model_config, exp_name, number=0):
+def get_random_coords(run, followup, model_config, exp_name, number=0):
 
     path = f"/work/bm1183/m301049/{model_config}/experiments/{run}/"
-    ds_3D = (
+
+    # check if random coords for that number already exist
+    if os.path.exists(
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/random_coords{number}.nc"
+    ):
+        print("Random coords already exist")
+        return
+    
+    ds_first = (
         xr.open_mfdataset(f"{path}{run}_atm_3d_main_19*.nc", chunks={})
         .pipe(merge_grid)
         .pipe(fix_time)
     )
+    path = f"/work/bm1183/m301049/{model_config}/experiments/{followup}/"
+    ds_second = (
+        xr.open_mfdataset(f"{path}{followup}_atm_3d_main_19*.nc", chunks={})
+        .pipe(merge_grid)
+        .pipe(fix_time)
+    )
+    ds = xr.concat([ds_first, ds_second], dim="time")
 
     # select tropics
-    ds_3D_trop = ds_3D.where((ds_3D.clat < 20) & (ds_3D.clat > -20), drop=True)
+    ds_trop = ds.where((ds.clat < 20) & (ds.clat > -20), drop=True)
 
     # get random coordinates across time and ncells
-    ncells = ds_3D_trop.sizes["ncells"]
-    time = ds_3D_trop.sizes["time"]
+    ncells = ds_trop.sizes["ncells"]
+    time = ds_trop.sizes["time"]
 
     # Generate unique pairs of random indices
     num_samples = int(1e7)
@@ -126,9 +141,9 @@ def get_random_coords(run, model_config, exp_name, number=0):
     # create xrrays
     random_coords = xr.Dataset(
         {
-            "time": xr.DataArray(ds_3D_trop.time[random_time_idx].values, dims="index"),
+            "time": xr.DataArray(ds_trop.time[random_time_idx].values, dims="index"),
             "ncells": xr.DataArray(
-                ds_3D_trop.ncells[random_ncells_idx].values, dims="index"
+                ds_trop.ncells[random_ncells_idx].values, dims="index"
             ),
         },
         coords={"index": np.arange(num_samples)},
@@ -225,58 +240,34 @@ def sample_profiles(
     return coordinates
 
 
-def sample_profiles_old(
-    ds,
-    local_time_bins,
-    local_time_points,
-    iwp_bins,
-    iwp_points,
-    n_profiles,
-    coordinates,
-):
-    """
-    Samples profiles from the dataset based on the given bins and points.
+# %% concatenate single files
+def concatenate_files(run, followup, exp_name, file):
+    datasets = {}
+    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/"
+    filelist = [
+        f"{path}{f}"
+        for f in os.listdir(path)
+        if (f.startswith(f"{run}_{file}")) or (f.startswith(f"{followup}_{file}"))
+    ]
+    filelist.sort()
+    datasets[file] = xr.open_mfdataset(
+        filelist,
+        combine="nested",
+        concat_dim=["index"],
+    ).sortby("index")
+    datasets[file].to_netcdf(f"{path}{run}_{file[:-3]}_randsample.nc")
 
-    Args:
-    - ds (xarray.Dataset): Original dataset containing the variables.
-    - local_time_bins (array-like): Array of local time bins.
-    - local_time_points (array-like): Array of points for local time bins.
-    - iwp_bins (array-like): Array of ice water path bins.
-    - iwp_points (array-like): Array of points for ice water path bins.
-    - n_profiles (int): Number of profiles to sample.
-    - locations (xarray.Dataset): Dataset to store the sampled locations.
 
-    Returns:
-    - None
-    """
-    # sample profiles
-    idx = np.arange(len(ds["IWP"].values.flatten()))
-    cell = ds.ncells.values
-    time = ds.time.values
-    cell_3d, time_3d = np.meshgrid(cell, time)
-    cell_3d = cell_3d.flatten()
-    time_3d = time_3d.flatten()
-
-    for i in tqdm(range(len(iwp_points))):
-        iwp_mask = (ds.IWP > iwp_bins[i]) & (ds.IWP <= iwp_bins[i + 1])
-        for j in range(len(local_time_points)):
-            time_mask = (ds.time_local > local_time_bins[j]) & (
-                ds.time_local <= local_time_bins[j + 1]
+# %% merge 2D and 3D data
+def merge_files(run, filenames, exp_name):
+    datasets = []
+    for file in filenames:
+        datasets.append(
+            xr.open_dataset(
+                f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/{run}_{file[:-3]}_randsample.nc"
             )
-            mask = iwp_mask & time_mask
-            # select n_profiles random true members from mask and set the rest to false
-            flat_mask = mask.values.flatten()
-            idx_true = idx[flat_mask]
-            member_idx = np.random.choice(idx_true, n_profiles, replace=False)
-            member_mask = np.zeros(len(idx)) > 1
-            member_mask[member_idx] = True
-            cells = cell_3d[member_mask]
-            times = time_3d[member_mask]
-            coordinates.loc[{"ciwp": iwp_points[i], "ctime": local_time_points[j]}][
-                "ncells"
-            ][:] = cells
-            coordinates.loc[{"ciwp": iwp_points[i], "ctime": local_time_points[j]}][
-                "time"
-            ][:] = times
-
-    return coordinates
+        )
+    datasets[0] = datasets[0].rename({"height_2": "s_height_2", "height": "s_height"})
+    ds = xr.merge(datasets)
+    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/{run}_randsample.nc"
+    ds.to_netcdf(path)

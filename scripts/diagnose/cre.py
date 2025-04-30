@@ -10,7 +10,7 @@ exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 datasets = {}
 for run in runs:
     datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20_conn.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
     )
 
 # %% calculate cre clearsky and wetsky
@@ -76,15 +76,15 @@ for run in runs:
 # %% save processed data
 for run in runs:
     path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/"
-    file = path + f"cre/{run}_cre_arr_rand_t_20_conn.nc"
+    file = path + f"cre/{run}_cre_arr_rand.nc"
     if os.path.exists(file):
         os.remove(file)
     cre_arr[run].to_netcdf(file)
-    file = path + f"cre/{run}_cre_interp_rand_t_20_conn.nc"
+    file = path + f"cre/{run}_cre_interp_rand.nc"
     if os.path.exists(file):
         os.remove(file)
     cre_interp[run].to_netcdf(file)
-    file = path + f"cre/{run}_cre_interp_mean_rand_t_20_conn.nc"
+    file = path + f"cre/{run}_cre_interp_mean_rand.nc"
     if os.path.exists(file):
         os.remove(file)
     cre_interp_mean[run].to_netcdf(file)
