@@ -11,10 +11,10 @@ datasets = {}
 cre_interp_mean = {}
 for run in runs:
     datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20_conn.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
     )
     cre_interp_mean[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand_t_20_conn.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand.nc"
     )
 
 # %% calculate masks
@@ -98,10 +98,10 @@ fig.savefig('plots/variability/iwp_time_of_day.png', dpi=300, bbox_inches='tight
 hists_north = {}
 hists_south = {}
 for run in runs:
-    iwp_north = datasets[run]["iwp"].where(masks_height[run] & (datasets[run]['clat'] > 0))
+    iwp_north = datasets[run]["iwp"].where( (datasets[run]['clat'] > 0))
     hists_north[run], edges = np.histogram(iwp_north, bins=iwp_bins, density=False)
     hists_north[run] = hists_north[run] / len(iwp_north)
-    iwp_south = datasets[run]["iwp"].where(masks_height[run] & (datasets[run]['clat'] < 0))
+    iwp_south = datasets[run]["iwp"].where((datasets[run]['clat'] < 0))
     hists_south[run], edges = np.histogram(iwp_south, bins=iwp_bins, density=False)
     hists_south[run] = hists_south[run] / len(iwp_south)
 

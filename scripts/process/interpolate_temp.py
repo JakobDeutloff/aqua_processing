@@ -12,7 +12,7 @@ run = sys.argv[1]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 
 ds = xr.open_dataset(
-    f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_20.nc"
+    f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample.nc"
 ).sel(index=slice(0, 1e6))
 
 vgrid = (
@@ -29,7 +29,7 @@ ds = ds.drop_vars([var for var in ds.variables if "height" not in ds[var].dims])
 ds = ds.assign(zg = vgrid["zg"])
 ds = ds.assign(dzghalf = vgrid["dzghalf"])
 ds = ds.assign_coords(index = ds["index"])
-#ds = ds.chunk({"index": 1e3, "height": -1})
+ds = ds.chunk({"index": 1e3, "height": -1})
 ds = ds.astype(float)
 
 # %% determine tropopause height and clearsky
@@ -60,14 +60,6 @@ height_array = xr.apply_ufunc(
 
 with ProgressBar(): 
     height_array = height_array.assign_coords(temp=t_grid, index=ds['index']).compute()
-
-# %% test why interpolation is not working 
-idx = int((ds['ta'].where(mask_trop).min() == ds['ta'].where(mask_trop).min('height')).argmax('index').values)
-t = ds['ta'].where(mask_trop).isel(index=idx).values
-h = ds['height']
-h_valid = h.where(~np.isnan(t)).values
-h_interp = np.interp(t_grid, t[~np.isnan(t)], h[~np.isnan(t)], left=np.nan, right=np.nan)
-
 
 # %% regrid to temperature
 print("Regrid to temperature")

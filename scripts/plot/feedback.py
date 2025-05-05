@@ -10,15 +10,15 @@ exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 datasets = {}
 cre_interp_mean = {}
 for run in runs:
-    datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20_conn.nc"
+    datasets[run] = xr.open_dataset( 
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
     )
     cre_interp_mean[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand_t_20_conn.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand_all.nc"
     )
 
 # %% calculate masks
-mode = "const_lc"
+mode = "prefinal"
 masks_height = {}
 for run in runs:
     if mode == "pressure":
@@ -27,6 +27,11 @@ for run in runs:
         masks_height[run] = True
     else:
         masks_height[run] = datasets[run]["hc_top_temperature"] < (273.15 - 35)
+
+# %%
+masks_height = {}
+for run in runs:
+    masks_height[run] = (datasets[run]['conn']!=1) | (datasets[run]['iwp']>0.06) | (datasets[run]['lwp'] < datasets[run]['iwp'])
 
 # %% plot CRE
 fig, ax = plt.subplots(figsize=(7, 4))

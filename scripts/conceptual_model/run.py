@@ -22,7 +22,7 @@ else:
 run = sys.argv[1]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 ds = xr.open_dataset(
-    f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20_conn.nc"
+    f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
 ).sel(index=slice(None, 1e6))
 parameters = load_parameters(run)
 lt_quantities = load_lt_quantities(run)
@@ -30,7 +30,7 @@ with open(f"data/{run}_lw_vars_mean.pkl", "rb") as f:
     hc_em = pickle.load(f)
 
 # %% set mask ans bins 
-mask = ds["mask_height"]
+mask = True
 IWP_bins = np.logspace(-4, 1, num=50)
 
 # %% calculate constants used in the model

@@ -2,19 +2,18 @@
 import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
-from src.grid_helpers import merge_grid
 import matplotlib as mpl
 
-# %%
+# %% load data
 runs = ["jed0011", "jed0022", "jed0033"]
-build_names = {'jed0011': 'icon-mpim', 'jed0022': 'icon-mpim-4K', 'jed0033': 'icon-mpim-2K'}
-exp_name = {"jed0011": "Control", "jed0022": "4K", "jed0033": "2K"}
-colors = {"jed0011": "k", "jed0022": "r", "jed0033": "orange"}
+exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
+colors = {"jed0011": "k", "jed0022": "red", "jed0033": "orange"}
 datasets = {}
+cre_interp_mean = {}
 for run in runs:
-    datasets[run] = xr.open_mfdataset(
-        f"/work/bm1183/m301049/{build_names[run]}/experiments/{run}/{run}_atm_2d_daymean*.nc"
-    ).pipe(merge_grid)
+    datasets[run] = xr.open_dataset(
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
+    )
 
 # %% calculate binned precip
 pr_binned = {}
@@ -23,15 +22,14 @@ pr_std = {}
 lat_bins = np.arange(-90, 90.5, 0.5)
 lat_points = (lat_bins[:-1] + lat_bins[1:]) / 2
 for run in runs:
-    pr_binned[run] = datasets[run]["pr"].groupby_bins(datasets[run]['clat'], lat_bins).mean().compute() * 86400
-    pr_mean[run] = pr_binned[run].mean('time')
-    pr_std[run] = pr_binned[run].std('time')
+    pr_mean[run] = datasets[run]["pr"].groupby_bins(datasets[run]['clat'], lat_bins).mean() * 86400
+    pr_std[run] = datasets[run]["pr"].groupby_bins(datasets[run]['clat'], lat_bins).std() * 86400
 # %% plot binned precip
 fig, ax = plt.subplots()
 
 for run in ['jed0022', 'jed0033', 'jed0011']:
     ax.plot(lat_points, pr_mean[run], label=exp_name[run], color=colors[run])
-    ax.fill_between(lat_points, pr_mean[run] - pr_std[run], pr_mean[run] + pr_std[run], alpha=0.2, color=colors[run])
+    #ax.fill_between(lat_points, pr_mean[run] - pr_std[run], pr_mean[run] + pr_std[run], alpha=0.2, color=colors[run])
 
 ax.spines[['top', 'right']].set_visible(False)
 ax.set_xlabel("Latitude")

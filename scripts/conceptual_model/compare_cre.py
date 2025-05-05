@@ -18,7 +18,7 @@ for run in runs:
     with open(f"data/model_output/{run}.pkl", "rb") as f:
         results[run] = pickle.load(f)
     cres[run] = xr.open_dataset(
-            f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand_t_20_conn.nc"
+            f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand_all.nc"
         )
 
 # %% make plot wit all quantities

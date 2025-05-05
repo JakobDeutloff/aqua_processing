@@ -18,11 +18,11 @@ else:
     print("PYTHONPATH is not set.")
 
 # %%
-run = sys.argv[1]
+run = 'jed0011' #sys.argv[1]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 colors = {'jed0011': 'k', 'jed0022': 'r', 'jed0033': 'orange'}
 ds = xr.open_dataset(
-    f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20_conn.nc"
+    f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
 ).sel(index=slice(None, 1e6))
 
 # %% initialize dataset for new variables
@@ -31,8 +31,7 @@ mean_lw_vars = pd.DataFrame()
 
 
 # %% mask for parameterization
-mask = (ds['hc_top_temperature'] < 273 - 35) & ~ds["mask_low_cloud"]
-
+mask = (ds['mask_low_cloud'] == 0) 
 # %% calculate high cloud emissivity
 sigma = 5.67e-8  # W m-2 K-4
 LW_out_as = ds["rlut"]

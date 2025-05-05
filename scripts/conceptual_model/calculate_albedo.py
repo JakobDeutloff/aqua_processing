@@ -22,7 +22,7 @@ run = sys.argv[1]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 colors = {'jed0011': 'k', 'jed0022': 'r', 'jed0033': 'orange'}
 ds = xr.open_dataset(
-    f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20_conn.nc"
+    f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
 ).sel(index=slice(None, 1e6))
 
 # %% initialize datasets
@@ -30,7 +30,7 @@ sw_vars = xr.Dataset()
 mean_sw_vars = pd.DataFrame()
 
 # %% set mask
-mask_parameterisation = ds["mask_height"] & ~ds["mask_low_cloud"]
+mask_parameterisation = ~ds["mask_low_cloud"]
 
 # %% calculate high cloud albedo
 def calc_hc_albedo(a_cs, a_as):
