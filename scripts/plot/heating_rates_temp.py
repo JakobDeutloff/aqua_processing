@@ -15,7 +15,7 @@ for run in runs:
         f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_tgrid_20.nc"
     )
     ds = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
     ).sel(index=slice(0, 1e6))
     # Assign all variables from ds to datasets if dim == index
     datasets[run] = datasets[run].assign(
@@ -294,4 +294,4 @@ fig.savefig(
     "plots/heating_rates/heating_rates_temp_diff_night.png", dpi=300, bbox_inches="tight"
 )
 
-# %%
+# %% 

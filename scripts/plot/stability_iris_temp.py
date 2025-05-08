@@ -28,7 +28,7 @@ for run in runs:
         f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_tgrid_20.nc"
     ).sel(temp=slice(200, None))
     ds = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_20.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample.nc"
     ).sel(index=slice(0, 1e6))
     # Assign all variables from ds to datasets if dim == index
     datasets[run] = datasets[run].assign(
@@ -218,7 +218,7 @@ for run in ["jed0022", "jed0033"]:
 
 # %% plot results in /m
 fig, axes = plt.subplots(1, 4, figsize=(14, 6), sharey=True)
-plot_const_hr = False
+plot_const_hr = True
 for run in runs:
     axes[0].plot(
         hrs[run]["net_hr"].where(masks_clearsky[run]).mean("index"),
@@ -278,7 +278,7 @@ fig.legend(
     ncol=3,
 )
 fig.tight_layout()
-fig.savefig("plots/iwp_drivers/stab_iris_temp_m_n.png", dpi=300, bbox_inches="tight")
+fig.savefig("plots/iwp_drivers/stab_iris_temp.png", dpi=300, bbox_inches="tight")
 
 # %% make scatterplot of max convergence and Ts
 max_conv = {}
@@ -336,7 +336,7 @@ for key in delta_dr.keys():
     )
 ax.text(
     0.1,
-    linreg.slope,
+    linreg.slope + 0.001,
     "ICON",
     fontsize=12,
 )

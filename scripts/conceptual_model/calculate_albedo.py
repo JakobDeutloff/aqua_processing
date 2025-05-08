@@ -18,7 +18,7 @@ else:
     print("PYTHONPATH is not set.")
 
 # %%
-run = sys.argv[1]
+run = 'jed0011' #sys.argv[1]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 colors = {'jed0011': 'k', 'jed0022': 'r', 'jed0033': 'orange'}
 ds = xr.open_dataset(
@@ -30,7 +30,7 @@ sw_vars = xr.Dataset()
 mean_sw_vars = pd.DataFrame()
 
 # %% set mask
-mask_parameterisation = ~ds["mask_low_cloud"]
+mask_parameterisation = (ds['mask_low_cloud'] == 0) & (ds['hc_top_temperature'] < 255) 
 
 # %% calculate high cloud albedo
 def calc_hc_albedo(a_cs, a_as):
@@ -133,6 +133,7 @@ res = least_squares(loss, p0, xtol=1e-12)
 logistic_curve = logistic(res.x, np.log10(IWP_points))
 
 # %% plot fitted albedo in scatterplot with IWP
+
 
 fig, ax = plt.subplots()
 

@@ -25,6 +25,8 @@ ds = xr.open_dataset(
     f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
 ).sel(index=slice(None, 1e6))
 parameters = load_parameters(run)
+parameters_control = load_parameters("jed0011")
+#parameters['alpha_hc'] = parameters_control['alpha_hc']
 lt_quantities = load_lt_quantities(run)
 with open(f"data/{run}_lw_vars_mean.pkl", "rb") as f:
     hc_em = pickle.load(f)
@@ -34,7 +36,7 @@ mask = True
 IWP_bins = np.logspace(-4, 1, num=50)
 
 # %% calculate constants used in the model
-SW_in = ds["rsdt"].where(mask).mean().values
+SW_in = 424 # ds["rsdt"].where(mask).mean().values
 parameters["SW_in"] = SW_in
 
 

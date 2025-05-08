@@ -117,33 +117,36 @@ binned_masks_temp = {}
 masks_pressure = {}
 binned_masks_pressure = {}
 for run in runs:
-    masks_temp[run] = datasets[run]["hc_top_temperature"] < (273.15)
-    masks_pressure[run] = datasets[run]["hc_top_pressure"] < 350
+    masks_temp[run] = datasets[run]["hc_top_temperature"] < (273.15 - 35)
     binned_masks_temp[run] = (
-        masks_temp[run].groupby_bins(datasets[run]["iwp"], iwp_bins).mean()
-    )
-    binned_masks_pressure[run] = (
-        masks_pressure[run].groupby_bins(datasets[run]["iwp"], iwp_bins).mean()
+        masks_temp[run].groupby_bins(datasets[run]["iwp"], np.logspace(-12, 2, 200)).mean()
     )
 
 
 fig, ax = plt.subplots()
 for run in runs:
     binned_masks_temp[run].plot(ax=ax, label=exp_name[run], color=colors[run])
-    binned_masks_pressure[run].plot(
-        ax=ax, label=exp_name[run], linestyle="--", color=colors[run]
-    )
+
 ax.set_xscale("log")
 ax.set_xlabel("$I$  / kg m$^{-2}$")
 ax.set_ylabel("Share of unmasked values")
 ax.spines[["top", "right"]].set_visible(False)
-handles = [
-    plt.Line2D([0], [0], color="grey", linestyle="-"),
-    plt.Line2D([0], [0], color="grey", linestyle="--"),
-]
-labels = ["Temperature", "Pressure"]
-fig.legend(handles, labels, bbox_to_anchor=[0.7, 0], frameon=True, ncols=2)
 fig.savefig(f"plots/feedback/mask_share.png", dpi=300, bbox_inches="tight")
+# %% share of ice clouds that only consist of graupel 
+fig, ax = plt.subplots()
+for run in runs:
+    graupel_only = (
+        (datasets[run]['qgvi'] == datasets[run]['iwp']).groupby_bins(
+            datasets[run]["iwp"], iwp_bins
+        ).mean()
+    )
+    ax.plot(
+        iwp_bins[:-1],
+        graupel_only,
+        label=exp_name[run],
+        color=colors[run],
+    )
+ax.set_xscale("log")
 
 # %% plot high cloud temperature for multiple pressure thresholds
 p_thresholds = [1000, 500, 350, 250, 200]
@@ -173,10 +176,11 @@ percentile_90 = {}
 median = {}
 fig, ax = plt.subplots()
 for run in runs:
-    percentile_90[run] = datasets[run]["hc_top_temperature"].quantile(0.95).values
-    median[run] = datasets[run]["hc_top_temperature"].quantile(0.5).values
+    mask_hc = datasets[run]['iwp']>1e-4
+    percentile_90[run] = datasets[run]["hc_top_temperature"].where(mask_hc).quantile(0.9).values
+    median[run] = datasets[run]["hc_top_temperature"].where(mask_hc).quantile(0.5).values
     hists_p[run] = np.histogram(
-        datasets[run]["hc_top_temperature"].values,
+        datasets[run]["hc_top_temperature"].where(mask_hc).values,
         bins=np.linspace(180, 280, 30),
         density=True,
     )
@@ -219,7 +223,7 @@ mean_temps = {}
 
 for run in runs:
     mean_temps[run] = datasets[run]["hc_top_temperature"].where(
-        datasets[run]["hc_top_temperature"] < (300)
+        datasets[run]["hc_top_temperature"] < datasets[run]["hc_top_temperature"].quantile(0.95)
     ).groupby_bins(
         datasets[run]["iwp"],
         iwp_bins,

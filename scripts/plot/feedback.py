@@ -10,28 +10,51 @@ exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 datasets = {}
 cre_interp_mean = {}
 for run in runs:
-    datasets[run] = xr.open_dataset( 
+    datasets[run] = xr.open_dataset(
         f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
     )
     cre_interp_mean[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand_all.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_dist_filter.nc"
     )
 
 # %% calculate masks
-mode = "prefinal"
+mode = "raw"
+mask_type = 'raw'
 masks_height = {}
-for run in runs:
-    if mode == "pressure":
-        masks_height[run] = datasets[run]["hc_top_pressure"] < 350
-    elif mode == "raw":
-        masks_height[run] = True
-    else:
-        masks_height[run] = datasets[run]["hc_top_temperature"] < (273.15 - 35)
 
-# %%
-masks_height = {}
-for run in runs:
-    masks_height[run] = (datasets[run]['conn']!=1) | (datasets[run]['iwp']>0.06) | (datasets[run]['lwp'] < datasets[run]['iwp'])
+if mask_type == "raw":
+    for run in runs:
+        masks_height[run] = True
+elif mask_type == "simple_filter":
+    for run in runs:
+        masks_height[run] = datasets[run]["hc_top_temperature"] < (273.15 - 35)
+elif mask_type == 'dist_filter':
+    masks_height = {}
+    iwp_bins = np.logspace(-4, np.log10(40), 51)
+    masks_height["jed0011"] = datasets["jed0011"]["hc_top_temperature"] < datasets[
+        "jed0011"
+    ]["hc_top_temperature"].where(datasets["jed0011"]["iwp"] > 1e-4).quantile(0.90)
+    quantiles = (
+        (masks_height["jed0011"] * 1)
+        .groupby_bins(datasets["jed0011"]["iwp"], iwp_bins)
+        .mean()
+    )
+
+    for run in runs[1:]:
+        mask = xr.DataArray(
+            np.ones_like(datasets[run]["hc_top_temperature"]),
+            dims=datasets[run]["hc_top_temperature"].dims,
+            coords=datasets[run]["hc_top_temperature"].coords,
+        )
+        for i in range(len(iwp_bins) - 1):
+            mask_ds = (datasets[run]["iwp"] > iwp_bins[i]) & (
+                datasets[run]["iwp"] <= iwp_bins[i + 1]
+            )
+            temp_vals = datasets[run]["hc_top_temperature"].where(mask_ds)
+            mask_temp = temp_vals > temp_vals.quantile(quantiles[i])
+            # mask n_masked values with the highest temperatures from temp_vals
+            mask = xr.where(mask_ds & mask_temp, 0, mask)
+        masks_height[run] = mask
 
 # %% plot CRE
 fig, ax = plt.subplots(figsize=(7, 4))
@@ -169,7 +192,6 @@ ax.spines[["top", "right"]].set_visible(False)
 fig.savefig(
     f"plots/feedback/{mode}/iwp_hist_rand_diff.png", dpi=300, bbox_inches="tight"
 )
-
 # %% multiply CRE and iwp hist
 cre_folded = {}
 const_iwp_folded = {}

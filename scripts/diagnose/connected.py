@@ -10,7 +10,7 @@ colors = {"jed0011": "k", "jed0022": "r", "jed0033": "orange"}
 datasets = {}
 for run in runs:
     datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_20.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
     ).sel(index=slice(0, 1e6))
 
 vgrid = (
@@ -20,17 +20,6 @@ vgrid = (
     .mean("ncells")
     .rename({"height_2": "height", "height": "height_2"})
 )
-
-# %% calculate IWP and LWP
-for run in runs:
-    datasets[run] = datasets[run].assign(
-        iwp=datasets[run]["clivi"] + datasets[run]["qsvi"] + datasets[run]["qgvi"]
-    )
-    datasets[run]["iwp"].attrs = {"long_name": "Ice Water Path", "units": "kg m^-2"}
-    datasets[run] = datasets[run].assign(
-        lwp=datasets[run]["cllvi"] + datasets[run]["qrvi"]
-    )
-    datasets[run]["lwp"].attrs = {"long_name": "Liquid Water Path", "units": "kg m^-2"}
 
 
 # %% convert to density
@@ -87,8 +76,8 @@ def calc_connected(ds, zg, frac_no_cloud=0.05, mean_height=11645):
     cloud_height = (cloud_top - cloud_bottom).mean()
 
     # define ice and liquid content needed for connectedness
-    no_ice_cloud = (ice > (frac_no_cloud * (mean_height/cloud_height)**7 * ice.max("height"))) * 1
-    no_liq_cloud = (liq > (frac_no_cloud * (mean_height/cloud_height)**7 * liq.max("height"))) * 1
+    no_ice_cloud = (ice > (frac_no_cloud * (mean_height/cloud_height)**12 * ice.max("height"))) * 1
+    no_liq_cloud = (liq > (frac_no_cloud * (mean_height/cloud_height)**12 * liq.max("height"))) * 1
     no_cld = (
         no_liq_cloud + no_ice_cloud
     ) - 1  # -1 for cells with not enough condensate
@@ -127,7 +116,7 @@ def calc_connected(ds, zg, frac_no_cloud=0.05, mean_height=11645):
 
 # %% calculate connectedness
 for run in runs:
-    conn = calc_connected(datasets_dens[run], vgrid["zg"], frac_no_cloud=0.05)
+    conn = calc_connected(datasets[run], vgrid["zg"], frac_no_cloud=0.05)
     datasets_dens[run] = datasets_dens[run].assign(conn=conn)
 
 # %% calculate lc fraction
@@ -135,9 +124,10 @@ iwp_bins = np.logspace(-4, 1, 51)
 iwp_points = (iwp_bins[:-1] + iwp_bins[1:]) / 2
 lc_fraction = {}
 liqc_fraction = {}
+conn_liquid = {}
 for run in runs:
     lc_fraction[run] = (
-        (datasets_dens[run]["lwp"].where(datasets_dens[run]["conn"] != 1) > 1e-4)
+        ((datasets_dens[run]["lwp"] > 1e-4) & (datasets_dens[run]['conn'] == 0))
         .groupby_bins(datasets_dens[run]["iwp"], iwp_bins, labels=iwp_points)
         .mean()
     )
@@ -146,6 +136,12 @@ for run in runs:
         .groupby_bins(datasets_dens[run]["iwp"], iwp_bins, labels=iwp_points)
         .mean()
     )
+    conn_liquid[run] = (
+        (datasets_dens[run]["conn"])
+        .groupby_bins(datasets_dens[run]["iwp"], iwp_bins, labels=iwp_points)
+        .mean()
+    )
+
 # %% plot low cloud fraction
 fig, ax = plt.subplots(1, 1, figsize=(10, 5))
 
@@ -160,6 +156,14 @@ for run in runs:
 
 ax.set_xscale("log")
 
+# %% plot share of connected liquid clouds
+fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+for run in runs:
+    ax.plot(
+        iwp_points, conn_liquid[run], label=exp_name[run], color=colors[run]
+    )
+ax.set_xscale("log")
+ax.set_yscale("log")
 # %% calculate mean profiles
 iwp_bins_coarse = np.logspace(-4, 1, 6)
 # Define the variables to process
@@ -182,7 +186,6 @@ for run in runs:
     for var, components in variables.items():
         results[var][run] = (
             sum(datasets_dens[run][comp] for comp in components)
-            .where(datasets_dens[run]["mask_height"])
             .groupby_bins(datasets_dens[run]["iwp"], iwp_bins_coarse)
             .mean()
         )
@@ -210,7 +213,7 @@ for i, run in enumerate(runs):
         axes[i, j].text(
             0.8,
             0.9,
-            f"{int((results['conn'][run].isel(iwp_bins=j).values * 100).round(0))}% ",
+            f"{float((results['conn'][run].isel(iwp_bins=j).values * 100).round(2))}% ",
             transform=axes[i, j].transAxes,
         )
         # Plot secondary variables on the twin axes
@@ -264,12 +267,7 @@ handles_liq, labels_liq = axes[0, 0].get_legend_handles_labels()
 handles_ice, labels_ice = axtwin[0, 0].get_legend_handles_labels()
 handles = handles_liq + handles_ice
 labels = labels_liq + labels_ice
-fig.legend(
-    handles,
-    labels,
-    bbox_to_anchor=(0.8, 0),
-    ncols=7
-)
+fig.legend(handles, labels, bbox_to_anchor=(0.8, 0), ncols=7)
 
 fig.tight_layout()
 fig.savefig(
