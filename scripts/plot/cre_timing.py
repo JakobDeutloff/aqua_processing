@@ -11,6 +11,7 @@ from tqdm import tqdm
 # %% load CRE data
 runs = ["jed0011", "jed0033", "jed0022"]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
+colors = {"jed0011": "k", "jed0022": "red", "jed0033": "orange"}
 cre_interp_mean = {}
 cre_arr = {}
 cre_arr_interp = {}
@@ -22,7 +23,13 @@ for run in runs:
     datasets[run] = xr.open_dataset(
         f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
     )
-
+    cape_cin = xr.open_dataset(
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_cape_cin.nc"
+    )
+    datasets[run] = datasets[run].assign(
+        cape=cape_cin["cape"],
+        cin=cape_cin["cin"],
+    )
 
 # %% calculate cre clearsky and wetsky
 for run in runs:
@@ -199,7 +206,7 @@ fig.savefig("plots/cre/time_local.png")
 
 # %% plot mean time and SW down
 fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharex=True)
-colors = {"jed0011": "k", "jed0022": "red", "jed0033": "orange"}
+
 
 for run in runs:
     sw_down_binned[run].sel(iwp_bins=slice(1e-4, 10)).plot(
@@ -251,7 +258,6 @@ for ax in axes:
 fig.savefig("plots/cre/timing_diff.png")
 
 # %% plot dist of time_local for high IWP
-
 for run in runs:
     hist, edges = np.histogram(
         datasets[run]["time_local"].where(datasets[run]["iwp"] > 1e0),
@@ -328,54 +334,36 @@ axes[1].set_ylabel("Amplitude")
 axes[1].set_xlabel("Temperature Change / K")
 fig.tight_layout()
 
-
-# %% calculate CIN and CAPE
-# mix_ratio = mpcalc.mixing_ratio_from_specific_humidity(datasets['jed0011']['hus'])
-dew_point = mpcalc.dewpoint_from_specific_humidity(
-    datasets["jed0011"]["pfull"] * units.Pa, datasets["jed0011"]["ta"] * units.degK, datasets["jed0011"]["hus"] * units.dimensionless
-)
-
-p = datasets["jed0011"]["pfull"].isel(height=slice(None, None, -1))
-t = datasets["jed0011"]["ta"].isel(height=slice(None, None, -1))
-dew_point = dew_point.isel(height=slice(None, None, -1))
-
-#  set units 
-p = p * units.Pa
-t = t * units.degK
-
-# %% loop over profiles  
-cape = []
-cin = []
-for i in tqdm(range(len(p))):
-    try:
-        cape_i, cin_i = mpcalc.surface_based_cape_cin(
-            p.isel(index=i), t.isel(index=i), dew_point.isel(index=i)
-        )
-    except ValueError:
-        print(f"Error in profile {i}")
-    cape.append(cape_i)
-    cin.append(cin_i)
-
-
-# %%
-from concurrent.futures import ProcessPoolExecutor, as_completed
-from tqdm import tqdm
-
-# Define a function to compute CAPE and CIN for a single profile
-def compute_cape_cin(index):
-    cape_i, cin_i = mpcalc.surface_based_cape_cin(
-        p.isel(index=index), t.isel(index=index), dew_point.isel(index=index)
+# %% look at CAPE and CIN vs IWP
+fig, axes = plt.subplots(2, 1, figsize=(5, 5), sharex=True)
+for run in runs:
+    datasets[run]["cape"].groupby_bins(datasets[run]["iwp"], iwp_bins).mean().plot(
+        ax=axes[0], label=exp_name[run], color=colors[run]
     )
-    return cape_i, cin_i
+    datasets[run]["cin"].groupby_bins(datasets[run]["iwp"], iwp_bins).mean().plot(
+        ax=axes[1], label=exp_name[run], color=colors[run]
+    )
 
-
-# Parallelize the loop
-cape = []
-cin = []
-with ProcessPoolExecutor() as executor:
-    futures = {executor.submit(compute_cape_cin, i): i for i in range(len(p))}
-    for future in tqdm(as_completed(futures), total=len(futures)):
-        cape_i, cin_i = future.result()
-        cape.append(cape_i)
-        cin.append(cin_i)
+axes[0].set_xscale("log")
+# %% look at daily cycle of CAPE and CIN
+fig, axes = plt.subplots(2, 1, figsize=(8, 8), sharex=True)
+bins = np.arange(0, 25, 1)
+for run in runs:
+    axes[0].plot(
+        bins[1:],
+        datasets[run]["cape"]
+        .groupby_bins(datasets[run]["time_local"], bins)
+        .mean() / datasets[run]["cape"].mean(),
+        label=exp_name[run],
+        color=colors[run],
+    )
+    axes[1].plot(
+        bins[1:],
+        datasets[run]["cin"]
+        .where(datasets[run]["cape"] > datasets[run]["cape"].quantile(0.8))
+        .groupby_bins(datasets[run]["time_local"], bins)
+        .mean(),
+        label=exp_name[run],
+        color=colors[run],
+    )
 # %%
