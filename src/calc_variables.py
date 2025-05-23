@@ -22,6 +22,33 @@ def calculate_hc_temperature(ds, IWP_emission=7.3e-3):
     p_top.attrs = {"units": "hPa", "long_name": "High cloud top pressure"}
 
     return T_h, p_top / 100
+def calc_brightness_temp(flux):
+    return (flux / 5.67e-8) ** (1 / 4)
+
+def calculate_hc_temperature_bright(ds, z_grid):
+    """
+    Calculate the temperature of high clouds.
+    """
+    
+    # calculate mask troposphere 
+    mask_stratosphere = z_grid < 25e3
+    idx_trop = ds["ta"].where(mask_stratosphere).argmin("height")
+    height_trop = ds["height"].isel(height=idx_trop)
+    mask_troposphere = ds["height"] > height_trop
+
+    # calculate brightness temperature
+    T_bright = calc_brightness_temp(ds["rlut"])
+    top_idx_thick = np.abs(ds["ta"].where(mask_troposphere) - T_bright).argmin("height")
+    top_idx_thin = (ds["cli"] + ds["qs"] + ds["qg"]).argmax("height")
+
+    top_idx = xr.where(top_idx_thick < top_idx_thin, top_idx_thick, top_idx_thin)
+    p_top = ds.isel(height=top_idx).phalf
+    T_h = ds["ta"].isel(height=top_idx)
+
+    T_h.attrs = {"units": "K", "long_name": "High Cloud Top Temperature"}
+    p_top.attrs = {"units": "hPa", "long_name": "High cloud top pressure"}
+
+    return T_h, p_top / 100
 
 
 def calc_cre(ds, mode):

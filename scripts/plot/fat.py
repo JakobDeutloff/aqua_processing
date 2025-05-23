@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import xarray as xr
 import numpy as np
 import matplotlib as mpl
-from src.calc_variables import calc_IWC_cumsum, calculate_hc_temperature
+from src.calc_variables import calc_IWC_cumsum, calculate_hc_temperature_bright
 
 # %% load data
 runs = ["jed0011", "jed0022", "jed0033"]
@@ -27,12 +27,23 @@ vgrid = (
     .rename({"height": "height_2", "height_2": "height"})
 )
 
+# %% calculate hc temp with brightness temperature
+hc_temps = {}
+for run in runs:
+    print(run)
+    temp, p = calculate_hc_temperature_bright(
+        datasets[run],
+        vgrid["zg"],
+    )
+    datasets[run] = datasets[run].assign({"hc_top_temp_bright": temp, "hc_top_pressure_bright": p})
+
+
 # %% bin temperature
 iwp_bins = np.logspace(-4, 1, 51)
 binned_temp = {}
 for run in runs:
     binned_temp[run] = (
-        datasets[run]["hc_top_temperature"]
+        datasets[run]["hc_top_temp_bright"]
         .groupby_bins(datasets[run]["iwp"], iwp_bins)
         .mean()
     )
@@ -65,15 +76,50 @@ axes[0].set_ylabel(r"T$_{\mathrm{hc}}$ / K")
 axes[1].set_ylabel(r"T$_{\mathrm{hc}}$ - T$_{\mathrm{hc}}$ Control / K")
 axes[1].set_xlabel(r"$I$ / kg m$^{-2}$")
 
-handles, labels = axes[0].get_legend_handles_labels()
+handles, names = axes[0].get_legend_handles_labels()
 
 fig.legend(
     handles=handles,
-    labels=labels,
+    labels=names,
     loc="lower center",
     bbox_to_anchor=(0.5, -0.1),
     ncols=3,
 )
+fig.savefig(
+    'plots/publication/fat.png', dpi=300, bbox_inches="tight"
+)
+
+# %% calculate mean hc temperatures
+means = {}
+for run in runs:
+    means[run] = datasets[run]["hc_top_temp_bright"].where(datasets[run]["iwp"] > 1e-4).mean().values
+    print(f"mean hc temp {exp_name[run]} {means[run]:.2f} K")
+
+# %% plot hist of hc temps
+fig, ax = plt.subplots(figsize=(8, 5))
+medians = {}
+for run in runs:
+    hist, edges = np.histogram(
+        datasets[run]["hc_top_temperature"].where((datasets[run]["iwp"] > 1e-4) & (datasets[run]["hc_top_temperature"] < 238)),
+        bins=np.linspace(180, 238, 30),
+        density=True
+    )
+    medians[run] = datasets[run]["hc_top_temperature"].where((datasets[run]["iwp"] > 1e-4) & (datasets[run]["hc_top_temperature"] < 238)).median().values
+    ax.stairs(
+        hist,
+        edges,
+        color=colors[run],
+        label=labels[run],
+    )
+    ax.axvline(
+        medians[run],
+        color=colors[run],
+        linestyle="--",
+        lw=0.5,
+    )
+ax.set_xlabel("T$_{\mathrm{hc}}$ / K")
+
+
 # %% calculate high cloud temperature weighted by cf 
 cfs = {}
 cfs_binned = {}

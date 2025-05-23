@@ -25,8 +25,6 @@ ds = xr.open_dataset(
     f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
 ).sel(index=slice(None, 1e6))
 parameters = load_parameters(run)
-parameters_control = load_parameters("jed0011")
-#parameters['alpha_hc'] = parameters_control['alpha_hc']
 lt_quantities = load_lt_quantities(run)
 with open(f"data/{run}_lw_vars_mean.pkl", "rb") as f:
     hc_em = pickle.load(f)
@@ -49,7 +47,7 @@ result = run_model(
     connectedness=ds['conn'],
     parameters = parameters,
     prescribed_lc_quantities=lt_quantities,
-    prescribed_hc_em=hc_em,
+    #prescribed_hc_em=hc_em,
 )
 # %% save result 
 with open(f'data/model_output/{run}.pkl', 'wb') as f:

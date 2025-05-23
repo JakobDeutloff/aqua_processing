@@ -18,7 +18,7 @@ for run in runs:
     with open(f"data/model_output/{run}.pkl", "rb") as f:
         results[run] = pickle.load(f)
     cres[run] = xr.open_dataset(
-            f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_mean_rand_all.nc"
+            f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_raw.nc"
         )
 
 # %% make plot wit all quantities
@@ -99,4 +99,16 @@ for i, run in enumerate(runs):
 fig.tight_layout()
 
 
+# %% compare lw cre and cre from fat 
+import numpy as np
+fig, ax = plt.subplots(1, 1, figsize=(10, 5), sharex=True)
+
+for run in runs[1:]:
+    ax.plot(cres[run]['iwp'], cres[run]['lw'] - cres['jed0011']['lw'], color=colors[run], label=exp_name[run], linestyle='-')
+
+    ax.plot(results[run].index, np.abs(results[run]['R_t'] - results['jed0011']['R_t']) - (5.67e-8 * (results[run]['T_hc']**4 - results['jed0011']['T_hc']**4)), color=colors[run], linestyle='--')
+
+
+ax.set_xscale("log")
+ax.set_xlim(1e-1, 1e1)
 # %%

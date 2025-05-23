@@ -7,6 +7,12 @@ from src.read_data import read_cloudsat
 # %% load data
 runs = ["jed0011", "jed0022", "jed0033"]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
+colors = {"jed0011": "k", "jed0022": "red", "jed0033": "orange"}
+line_labels = {
+    "jed0011": "Control",
+    "jed0022": "+4 K",
+    "jed0033": "+2 K",
+}
 datasets = {}
 cre_interp_mean = {}
 for run in runs:
@@ -14,12 +20,12 @@ for run in runs:
         f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
     )
     cre_interp_mean[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_dist_filter.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_raw.nc"
     )
 
 # %% calculate masks
 mode = "raw"
-mask_type = 'raw'
+mask_type = "raw"
 masks_height = {}
 
 if mask_type == "raw":
@@ -28,7 +34,7 @@ if mask_type == "raw":
 elif mask_type == "simple_filter":
     for run in runs:
         masks_height[run] = datasets[run]["hc_top_temperature"] < (273.15 - 35)
-elif mask_type == 'dist_filter':
+elif mask_type == "dist_filter":
     masks_height = {}
     iwp_bins = np.logspace(-4, np.log10(40), 51)
     masks_height["jed0011"] = datasets["jed0011"]["hc_top_temperature"] < datasets[
@@ -89,7 +95,7 @@ fig.legend(
     frameon=False,
 )
 
-ax.set_xlim([1e-4, 2e1])
+ax.set_xlim([1e-4, 1e1])
 ax.spines[["top", "right"]].set_visible(False)
 ax.set_xlabel("$I$  / kg m$^{-2}$")
 ax.set_ylabel("$C(I)$  / W m$^{-2}$")
@@ -97,46 +103,39 @@ ax.set_xscale("log")
 fig.savefig(f"plots/feedback/{mode}/cre_iwp.png", dpi=300, bbox_inches="tight")
 
 # %% plot CRE diff
-fig, axes = plt.subplots(3, 1, figsize=(7, 7), sharex=True)
+fig, axes = plt.subplots(2, 1, figsize=(7, 5), sharex=True)
 
 
 (cre_interp_mean["jed0033"]["lw"] - cre_interp_mean["jed0011"]["lw"]).plot(
-    ax=axes[0], color="r", alpha=0.7, linestyle="-."
+    ax=axes[0], color="orange", alpha=0.7, linestyle="-"
 )
 (cre_interp_mean["jed0022"]["lw"] - cre_interp_mean["jed0011"]["lw"]).plot(
-    ax=axes[0], color="r", alpha=0.7, linestyle="--"
+    ax=axes[0], color="r", alpha=0.7, linestyle="-"
 )
 (cre_interp_mean["jed0033"]["sw"] - cre_interp_mean["jed0011"]["sw"]).plot(
-    ax=axes[1], color="blue", alpha=0.7, linestyle="-."
+    ax=axes[1], color="orange", alpha=0.7, linestyle="-"
 )
 (cre_interp_mean["jed0022"]["sw"] - cre_interp_mean["jed0011"]["sw"]).plot(
-    ax=axes[1], color="blue", alpha=0.7, linestyle="--"
-)
-(cre_interp_mean["jed0033"]["net"] - cre_interp_mean["jed0011"]["net"]).plot(
-    ax=axes[2], color="k", alpha=0.7, linestyle="-."
-)
-(cre_interp_mean["jed0022"]["net"] - cre_interp_mean["jed0011"]["net"]).plot(
-    ax=axes[2], color="k", alpha=0.7, linestyle="--"
+    ax=axes[1], color="r", alpha=0.7, linestyle="-"
 )
 
-labels = ["+2K - control", "+4K - control"]
+labels = ["+2 K", "+4 K"]
 handles = [
-    plt.Line2D([0], [0], color="grey", linestyle="-."),
-    plt.Line2D([0], [0], color="grey", linestyle="--"),
+    plt.Line2D([0], [0], color="r", linestyle="-"),
+    plt.Line2D([0], [0], color="orange", linestyle="-"),
 ]
-fig.legend(handles, labels, bbox_to_anchor=[0.7, 0], frameon=True, ncols=2)
+fig.legend(handles, labels, bbox_to_anchor=[0.65, 0], frameon=True, ncols=2)
 
 for ax in axes:
-    ax.set_xlim([1e-4, 4e1])
-    ax.set_ylim([-5, 15])
+    ax.set_xlim([1e-4, 10])
+    ax.set_ylim([-2, 20])
     ax.spines[["top", "right"]].set_visible(False)
     ax.set_xlabel("$I$  / kg m$^{-2}$")
     ax.set_xscale("log")
     ax.axhline(0, color="grey", linestyle="--", linewidth=0.8)
 
-axes[0].set_ylabel(r"$\Delta C_{\mathrm{lw}}(I)$  / W m$^{-2}$")
-axes[1].set_ylabel(r"$\Delta C_{\mathrm{sw}}(I)$  / W m$^{-2}$")
-axes[2].set_ylabel(r"$\Delta C_{\mathrm{net}}(I)$  / W m$^{-2}$")
+axes[0].set_ylabel(r"$\Delta C_{\mathrm{lw}}(I)$  / W m$^{-2}$", color='red')
+axes[1].set_ylabel(r"$\Delta C_{\mathrm{sw}}(I)$  / W m$^{-2}$", color='blue')
 fig.savefig(f"plots/feedback/{mode}/cre_iwp_diff.png", dpi=300, bbox_inches="tight")
 
 # %% read cloudsat
@@ -160,12 +159,11 @@ histograms["cloudsat"] = histograms["cloudsat"] / len(cloudsat["ice_water_path"]
 
 # %% plot iwp hists
 fig, ax = plt.subplots(1, 1, figsize=(8, 5))
-colors = {"jed0011": "k", "jed0022": "red", "jed0033": "orange"}
 ax.stairs(
     histograms["cloudsat"], edges, label="2C-ICE", color="k", linewidth=4, alpha=0.5
 )
-for run in runs:
-    ax.stairs(histograms[run], edges, label=exp_name[run], color=colors[run])
+for run in ['jed0011']:
+    ax.stairs(histograms[run], edges, label=line_labels[run], color=colors[run])
 
 ax.legend()
 ax.set_xscale("log")
@@ -174,23 +172,23 @@ ax.set_ylabel("P($I$)")
 ax.set_xlabel("$I$ / kg m$^{-2}$")
 ax.set_xlim([1e-4, 40])
 ax.spines[["top", "right"]].set_visible(False)
-fig.savefig(f"plots/feedback/{mode}/iwp_hist_rand.png", dpi=300, bbox_inches="tight")
+fig.savefig(f"plots/feedback/{mode}/iwp_hist_cont.png", dpi=300, bbox_inches="tight")
 
 # %% plot diff to control
 fig, ax = plt.subplots(1, 1, figsize=(8, 5))
 ax.axhline(0, color="grey", linestyle="--", linewidth=0.8)
 for run in ["jed0022", "jed0033"]:
     diff = histograms[run] - histograms["jed0011"]
-    ax.stairs(diff, edges, label=exp_name[run], color=colors[run])
+    ax.stairs(diff, edges, label=line_labels[run], color=colors[run])
 
 ax.legend()
 ax.set_xscale("log")
-ax.set_ylabel("P($I$)")
+ax.set_ylabel("$\Delta P(I)$")
 ax.set_xlabel("$I$ / kg m$^{-2}$")
 ax.set_xlim([1e-4, 40])
 ax.spines[["top", "right"]].set_visible(False)
 fig.savefig(
-    f"plots/feedback/{mode}/iwp_hist_rand_diff.png", dpi=300, bbox_inches="tight"
+    f"plots/feedback/{mode}/iwp_hist_diff.png", dpi=300, bbox_inches="tight"
 )
 # %% multiply CRE and iwp hist
 cre_folded = {}
@@ -243,11 +241,10 @@ fig.savefig(f"plots/feedback/{mode}/cre_iwp_folded.png", dpi=300, bbox_inches="t
 
 # %% plot diff of folded CRE
 temp_deltas = {"jed0022": 4, "jed0033": 2}
-linestyles = {"jed0022": "--", "jed0033": "-"}
-fig, axes = plt.subplots(3, 1, figsize=(8, 8), sharex=True)
+linestyles = {"jed0022": "-", "jed0033": "--"}
+fig, axes = plt.subplots(3, 1, figsize=(8, 8), sharex=True, sharey=False)
 
 for run in ["jed0022", "jed0033"]:
-    axes[0].set_title("Total Feedback")
     axes[0].stairs(
         (cre_folded[run]["sw"] - cre_folded["jed0011"]["sw"]) / temp_deltas[run],
         edges,
@@ -266,7 +263,6 @@ for run in ["jed0022", "jed0033"]:
         color="k",
         linestyle=linestyles[run],
     )
-    axes[1].set_title("IWP Change Feedback")
     axes[1].stairs(
         (const_cre_folded[run]["sw"] - const_cre_folded["jed0011"]["sw"])
         / temp_deltas[run],
@@ -288,7 +284,6 @@ for run in ["jed0022", "jed0033"]:
         color="k",
         linestyle=linestyles[run],
     )
-    axes[2].set_title("CRE Change Feedback")
     axes[2].stairs(
         (const_iwp_folded[run]["sw"] - const_iwp_folded["jed0011"]["sw"])
         / temp_deltas[run],
@@ -311,23 +306,27 @@ for run in ["jed0022", "jed0033"]:
         label=exp_name[run],
         linestyle=linestyles[run],
     )
+    axes[2].set_ylabel(r"$F_{\mathrm{CRE}}(I)$ / W m$^{-2}$ K$^{-1}$")
+    axes[1].set_ylabel(r"$F_{\mathrm{IWP}}(I)$ / W m$^{-2}$ K$^{-1}$")
+    axes[0].set_ylabel(r"$F(I)$ / W m$^{-2}$ K$^{-1}$")
 
 for ax in axes:
     ax.spines[["top", "right"]].set_visible(False)
     ax.set_xlim([1e-4, 40])
     ax.set_xscale("log")
     ax.axhline(0, color="grey", linestyle="-", linewidth=0.8)
-    ax.set_ylabel("Feedback / W m$^{-2}$ K$^{-1}$")
-    ax.set_ylim([-0.04, 0.04])
 
 axes[-1].set_xlabel("$I$  / kg m$^{-2}$")
 
-labels = ["+2K", "+4K"]
+labels = ["LW", "SW", "Net", "+2K", "+4K"]
 handles = [
-    plt.Line2D([0], [0], color="grey", linestyle="-"),
+    plt.Line2D([0], [0], color="red", linestyle="-"),
+    plt.Line2D([0], [0], color="blue", linestyle="-"),
+    plt.Line2D([0], [0], color="k", linestyle="-"),
     plt.Line2D([0], [0], color="grey", linestyle="--"),
+    plt.Line2D([0], [0], color="grey", linestyle="-"),
 ]
-fig.legend(handles, labels, bbox_to_anchor=[0.9, 0.07], frameon=True, ncols=2)
+fig.legend(handles, labels, bbox_to_anchor=[0.8, 0.03], frameon=True, ncols=5)
 fig.savefig(
     f"plots/feedback/{mode}/cre_iwp_folded_diff.png", dpi=300, bbox_inches="tight"
 )
@@ -436,13 +435,13 @@ axes[2].set_title("IWP Change")
 
 for ax in axes:
     ax.set_xticks([0, 1, 2])
-    ax.set_yticks([-0.5, 0, 0.5])
+    ax.set_yticks([-0.3, 0, 0.3, 0.6])
     ax.set_xticklabels(["LW", "SW", "Net"])
     ax.spines[["top", "right"]].set_visible(False)
     ax.axhline(0, color="grey", linestyle="--", linewidth=0.8)
 
 
-axes[0].set_ylabel("Feedback / W m$^{-2}$ K$^{-1}$")
+axes[0].set_ylabel("$F$ / W m$^{-2}$ K$^{-1}$")
 
 labels = ["+2K", "+4K"]
 handles = [

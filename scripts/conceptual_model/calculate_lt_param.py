@@ -39,8 +39,8 @@ mask_low_cloud = ds["lwp"] > 1e-4
 mask_connected = ds["conn"] == 1
 
 # %% calculate mean lc fraction
-iwp_bins = np.logspace(-5, 1, num=50)
-f_mean = ds["mask_low_cloud"].where(ds["mask_height"]).mean().values.round(3)
+iwp_bins = np.logspace(-4, 1, num=50)
+f_mean = ds["mask_low_cloud"].where(ds['iwp']>1e-4).mean().values.round(3)
 
 # %% calculate albedos
 albedo_allsky = np.abs(ds["rsutws"] / ds["rsdt"])
@@ -242,12 +242,12 @@ ax.set_xscale("log")
 
 # %% calculate lower tropospheric variables binned by iwp
 binned_lower_trop_vars["a_t"] = (
-    lower_trop_vars["alpha_t"].where(ds["mask_height"])
+    lower_trop_vars["alpha_t"]
     .groupby_bins(ds["iwp"], iwp_bins)
     .mean()
 )
 binned_lower_trop_vars["R_t"] = (
-    lower_trop_vars["R_t"].where(ds["mask_height"])
+    lower_trop_vars["R_t"]
     .groupby_bins(ds['iwp'], iwp_bins)
     .mean()
 )

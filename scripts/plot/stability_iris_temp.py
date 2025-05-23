@@ -21,6 +21,11 @@ from scipy.stats import linregress
 runs = ["jed0011", "jed0022", "jed0033"]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 colors = {"jed0011": "k", "jed0022": "r", "jed0033": "orange"}
+labels = {
+    "jed0011": "Control",
+    "jed0022": "+4 K",
+    "jed0033": "+2 K",
+}
 datasets = {}
 datasets
 for run in runs:
@@ -186,7 +191,6 @@ for run in runs:
     )
     stab[run] = calc_stability(datasets[run]["ta"], datasets[run]["zg"])
 
-# %%
 for run in runs:
     subs[run] = calc_w_sub(
         hrs[run]["net_hr"].where(masks_clearsky[run]).mean("index"),
@@ -218,33 +222,33 @@ for run in ["jed0022", "jed0033"]:
 
 # %% plot results in /m
 fig, axes = plt.subplots(1, 4, figsize=(14, 6), sharey=True)
-plot_const_hr = True
+plot_const_hr = False
 for run in runs:
     axes[0].plot(
         hrs[run]["net_hr"].where(masks_clearsky[run]).mean("index"),
         hrs[run]["temp"],
-        label=exp_name[run],
+        label=labels[run],
         color=colors[run],
     )
     axes[0].set_xlabel("Heating rate / K day$^{-1}$")
     axes[1].plot(
         stab[run].where(masks_clearsky[run]).mean("index"),
         stab[run]["temp"],
-        label=exp_name[run],
+        label=labels[run],
         color=colors[run],
     )
     axes[1].set_xlabel("Stability / K m$^{-1}$")
     axes[2].plot(
         subs[run],
         subs[run]["temp"],
-        label=exp_name[run],
+        label=labels[run],
         color=colors[run],
     )
     axes[2].set_xlabel("Subsidence / m day$^{-1}$")
     axes[3].plot(
         conv[run],
         conv[run]["temp"],
-        label=exp_name[run],
+        label=labels[run],
         color=colors[run],
     )
     axes[3].set_xlabel("Convergence /  day$^{-1}$")
@@ -253,14 +257,14 @@ if plot_const_hr:
         axes[2].plot(
             subs_cont[run],
             subs_cont[run]["temp"],
-            label=exp_name[run],
+            label=labels[run],
             color=colors[run],
             linestyle="--",
         )
         axes[3].plot(
             conv_cont[run],
             conv_cont[run]["temp"],
-            label=exp_name[run],
+            label=labels[run],
             color=colors[run],
             linestyle="--",
         )
@@ -269,10 +273,10 @@ axes[0].set_ylim([260, 200])
 for ax in axes:
     ax.spines[["top", "right"]].set_visible(False)
 axes[0].set_ylabel("Temperature / K")
-handles, labels = axes[0].get_legend_handles_labels()
+handles, names = axes[0].get_legend_handles_labels()
 fig.legend(
     handles,
-    labels,
+    names,
     loc="center",
     bbox_to_anchor=(0.5, -0.05),
     ncol=3,
@@ -306,18 +310,18 @@ ax.plot(
 ax.set_xticks(list(t_delta.values()))
 ax.spines[["top", "right"]].set_visible(False)
 ax.set_xlabel("$\Delta T_s$ / K")
-ax.set_ylabel("Max Convergence / day$^{-1}$")
+ax.set_ylabel(" $D_{\mathrm{max}}$ / day$^{-1}$")
 fig.tight_layout()
 fig.savefig("plots/iwp_drivers/max_conv.png", dpi=300, bbox_inches="tight")
 
 # %% make comparison plot to other studies
 delta_dr = {
-    "Jevanjee (2022)": (0.65 - 0.27),
+    "Jeevanjee (2022)": (0.65 - 0.27),
     "Bony et al. (2016)": (0.59 - 0.2),
     "Saint-Lu et al. (2020)": (0.006 + 0.01),
 }
 delta_t = {
-    "Jevanjee (2022)": (310 - 280),
+    "Jeevanjee (2022)": (310 - 280),
     "Bony et al. (2016)": (310 - 285),
     "Saint-Lu et al. (2020)": (0.23 + 0.42),
 }
@@ -349,7 +353,7 @@ yticks.append(0)
 yticks = np.round(yticks, 3)
 ax.set_yticks(yticks)
 ax.spines[["top", "right", "bottom"]].set_visible(False)
-ax.set_ylabel(r"$\Delta D /\Delta T_s$ / day$^{-1}$ K$^{-1}$")
+ax.set_ylabel(r"$\Delta D_{\mathrm{max}} /\Delta T_s$ / day$^{-1}$ K$^{-1}$")
 fig.savefig(
     "plots/iwp_drivers/max_conv_comparison.png",
     dpi=300,
@@ -381,19 +385,19 @@ for run in runs:
     axes[0].plot(
         mean_hr[run],
         mean_hr[run]["temp"],
-        label=exp_name[run],
+        label=labels[run],
         color=colors[run],
     )
     axes[2].plot(
         mean_rho[run],
         mean_rho[run]["temp"],
-        label=exp_name[run],
+        label=labels[run],
         color=colors[run],
     )
     axes[1].plot(
         f_conv[run].where(masks_clearsky[run]).mean("index"),
         f_conv[run]["temp"],
-        label=exp_name[run],
+        label=labels[run],
         color=colors[run],
     )
 
@@ -407,10 +411,10 @@ axes[0].set_xlabel("Heating rate / K day$^{-1}$")
 for ax in axes:
     ax.spines[["top", "right"]].set_visible(False)
 
-handles, labels = axes[0].get_legend_handles_labels()
+handles, names = axes[0].get_legend_handles_labels()
 fig.legend(
     handles,
-    labels,
+    names,
     loc="center",
     bbox_to_anchor=(0.5, -0.05),
     ncol=3,

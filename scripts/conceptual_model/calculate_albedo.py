@@ -18,7 +18,7 @@ else:
     print("PYTHONPATH is not set.")
 
 # %%
-run = 'jed0011' #sys.argv[1]
+run = sys.argv[1]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 colors = {'jed0011': 'k', 'jed0022': 'r', 'jed0033': 'orange'}
 ds = xr.open_dataset(

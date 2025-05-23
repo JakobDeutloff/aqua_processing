@@ -30,6 +30,18 @@ for run in runs:
         cape=cape_cin["cape"],
         cin=cape_cin["cin"],
     )
+vgrid = (
+    xr.open_dataset(
+        "/work/bm1183/m301049/icon-mpim/experiments/jed0001/atm_vgrid_angel.nc"
+    )
+    .mean("ncells")
+    .rename({"height_2": "height", "height": "height_2"})
+)
+
+# %% difference in SW down for I>1
+for run in runs:
+    sw_down = datasets[run]["rsdt"].where(datasets[run]["iwp"] > 1).mean()
+    print(f"{run} {sw_down.values}")
 
 # %% calculate cre clearsky and wetsky
 for run in runs:
@@ -231,7 +243,6 @@ fig.savefig("plots/cre/timing.png")
 
 # %% plot diff in time and dist to eq
 fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharex=True)
-colors = {"jed0011": "k", "jed0022": "red", "jed0033": "orange"}
 
 for run in runs[1:]:
     (
@@ -279,7 +290,7 @@ def sin_func(x, a, b, c):
     return a * np.sin((x * 2 * np.pi / 24) + (b * 2 * np.pi / 24)) + c
 
 
-parameters = {}
+parameters_iwp = {}
 
 fig, ax = plt.subplots(1, 1, figsize=(10, 5))
 bins = np.arange(0, 25, 1)
@@ -295,7 +306,7 @@ for run in runs:
     popt, pcov = curve_fit(
         sin_func, x, hist, p0=[0.00517711, 1, 0.30754356], method="trf", **options
     )
-    parameters[run] = popt
+    parameters_iwp[run] = popt
     ax.stairs(hist, edges, label=exp_name[run], color=colors[run])
     ax.plot(bins, sin_func(bins, *popt), color=colors[run], linestyle="--")
 ax.set_xlim([0.1, 23.9])
@@ -303,8 +314,85 @@ ax.set_ylim([0.03, 0.055])
 ax.spines[["top", "right"]].set_visible(False)
 ax.set_xlabel("Local Time / h")
 ax.set_ylabel("Probability")
+labels = ["Control", "+2 K", "+4 K", "Sinus Fit", "Histogram"]
+handles = [
+    plt.Line2D([0], [0], color="k", linestyle="-"),
+    plt.Line2D([0], [0], color="orange", linestyle="-"),
+    plt.Line2D([0], [0], color="red", linestyle="-"),
+    plt.Line2D([0], [0], color="grey", linestyle="--"),
+    plt.Line2D([0], [0], color="grey", linestyle="-"),
+]
+ax.legend(handles, labels)
+fig.tight_layout()
+fig.savefig("plots/timing/daily_cycle.png")
 
-# %% plot phase and amplitude of fits
+# %% histogram of local time for wa > 1
+fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+bins = np.arange(0, 25, 1)
+quantiles = {}
+x = (bins[:-1] + bins[1:]) / 2
+height_1 = np.abs((vgrid["zghalf"] - 2e3)).argmin(dim="height_2").values
+height_2 = np.abs((vgrid["zghalf"] - 15e3)).argmin(dim="height_2").values
+parameters_wa = {}
+for run in runs:
+    vels = (
+        datasets[run]["wa"].isel(height_2=slice(height_2, height_1)).max(dim="height_2")
+    )
+    quantiles[run] = vels.quantile(0.99)
+    mask = vels > quantiles[run]
+
+    hist, edges = np.histogram(
+        datasets[run]["time_local"].where(mask),
+        bins,
+        density=True,
+    )
+
+    # fit sin
+
+    popt, pcov = curve_fit(
+        sin_func, x, hist, p0=[0.00517711, 1, 0.30754356], method="trf", **options
+    )
+    parameters_wa[run] = popt
+
+    ax.stairs(
+        hist,
+        edges,
+        label=exp_name[run],
+        color=colors[run],
+    )
+    ax.plot(x, sin_func(x, *popt), color=colors[run], linestyle="--")
+ax.set_xlim([0.1, 23.9])
+ax.set_ylim([0.03, 0.06])
+ax.spines[["top", "right"]].set_visible(False)
+ax.set_xlabel("Local Time / h")
+ax.set_ylabel("Probability")
+labels = ["Control", "+2 K", "+4 K", "Sinus Fit", "Histogram"]
+handles = [
+    plt.Line2D([0], [0], color="k", linestyle="-"),
+    plt.Line2D([0], [0], color="orange", linestyle="-"),
+    plt.Line2D([0], [0], color="red", linestyle="-"),
+    plt.Line2D([0], [0], color="grey", linestyle="--"),
+    plt.Line2D([0], [0], color="grey", linestyle="-"),
+]
+ax.legend(handles, labels)
+fig.tight_layout()
+fig.savefig("plots/timing/daily_cycle_wa.png")
+
+# %% plot correlation of iwp and wa
+fig, axes = plt.subplots(1, 3, figsize=(10, 5))
+for i, run in enumerate(runs):
+    mask = datasets[run]["iwp"] > 1e0
+    axes[i].scatter(
+        datasets[run]["iwp"].where(mask),
+        datasets[run]["wa"].where(mask).isel(height_2=height),
+        color=colors[run],
+        s=0.1,
+        alpha=0.5,
+    )
+    axes[i].set_xscale("log")
+
+
+# %% plot phase and amplitude of iwp fits
 fig, axes = plt.subplots(2, 1, figsize=(4, 5))
 T_delta = {
     "jed0011": 0,
@@ -314,12 +402,12 @@ T_delta = {
 for run in ["jed0022", "jed0033", "jed0011"]:
     axes[0].scatter(
         T_delta[run],
-        parameters[run][1],
+        parameters_iwp[run][1],
         color=colors[run],
     )
     axes[1].scatter(
         T_delta[run],
-        parameters[run][0],
+        parameters_iwp[run][0],
         color=colors[run],
     )
 
@@ -333,8 +421,13 @@ axes[0].set_ylabel("Phase / h")
 axes[1].set_ylabel("Amplitude")
 axes[1].set_xlabel("Temperature Change / K")
 fig.tight_layout()
+fig.savefig("plots/timing/daily_cycle_fit.png")
+
+# %% compare phase of iwp ans wa
+
 
 # %% look at CAPE and CIN vs IWP
+iwp_bins = np.logspace(-4, np.log10(40), 31)
 fig, axes = plt.subplots(2, 1, figsize=(5, 5), sharex=True)
 for run in runs:
     datasets[run]["cape"].groupby_bins(datasets[run]["iwp"], iwp_bins).mean().plot(
@@ -349,21 +442,69 @@ axes[0].set_xscale("log")
 fig, axes = plt.subplots(2, 1, figsize=(8, 8), sharex=True)
 bins = np.arange(0, 25, 1)
 for run in runs:
+    mask = (datasets[run]["iwp"] < 1e-4) & (datasets[run]["lwp"] < 1e-4)
+
     axes[0].plot(
         bins[1:],
         datasets[run]["cape"]
+        .where(mask)
         .groupby_bins(datasets[run]["time_local"], bins)
-        .mean() / datasets[run]["cape"].mean(),
+        .mean(),
         label=exp_name[run],
         color=colors[run],
     )
     axes[1].plot(
         bins[1:],
         datasets[run]["cin"]
-        .where(datasets[run]["cape"] > datasets[run]["cape"].quantile(0.8))
+        .where(mask)
         .groupby_bins(datasets[run]["time_local"], bins)
         .mean(),
         label=exp_name[run],
         color=colors[run],
     )
+# %% plot upward velocity at 6 km binned by IWP
+fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+
+for run in runs:
+    datasets[run]["wa"].isel(height_2=height).groupby_bins(
+        datasets[run]["iwp"], iwp_bins
+    ).mean().plot(ax=ax, label=exp_name[run], color=colors[run])
+
+ax.set_xscale("log")
+# %% plot histogram uf upward velocities for IWP > 1
+fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+bins = np.arange(-2, 5, 0.1)
+for run in runs:
+    hist, edges = np.histogram(
+        datasets[run]["wa"].where(datasets[run]["iwp"] > 10).isel(height_2=height),
+        bins,
+        density=False,
+    )
+
+    ax.stairs(
+        hist,
+        edges,
+        label=exp_name[run],
+        color=colors[run],
+        alpha=0.5,
+    )
+
+# %% plot histogram of upward velocities above 1
+fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+bins = np.arange(1, 5, 0.1)
+for run in runs:
+    hist, edges = np.histogram(
+        datasets[run]["wa"].isel(height_2=height),
+        bins,
+        density=False,
+    )
+    ax.stairs(
+        hist,
+        edges,
+        label=exp_name[run],
+        color=colors[run],
+        alpha=0.5,
+    )
+
+
 # %%
