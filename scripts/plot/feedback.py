@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import xarray as xr
 import numpy as np
 from src.read_data import read_cloudsat
+import pickle as pkl
 
 # %% load data
 runs = ["jed0011", "jed0022", "jed0033"]
@@ -14,12 +15,14 @@ line_labels = {
     "jed0033": "+2 K",
 }
 datasets = {}
-cre_interp_mean = {}
+cre = {}
+with open('/work/bm1183/m301049/icon_hcap_data/iwp_dists.pkl', 'rb') as f:
+    histograms = pkl.load(f)
 for run in runs:
     datasets[run] = xr.open_dataset(
         f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
     )
-    cre_interp_mean[run] = xr.open_dataset(
+    cre[run] = xr.open_dataset(
         f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_raw.nc"
     )
 
@@ -65,17 +68,17 @@ elif mask_type == "dist_filter":
 # %% plot CRE
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.axhline(0, color="grey", linestyle="--", linewidth=0.8)
-cre_interp_mean["jed0011"]["net"].plot(ax=ax, color="k", alpha=0.7)
-cre_interp_mean["jed0011"]["sw"].plot(ax=ax, color="blue", alpha=0.7)
-cre_interp_mean["jed0011"]["lw"].plot(ax=ax, color="red", alpha=0.7)
+cre["jed0011"]["net"].plot(ax=ax, color="k", alpha=0.7)
+cre["jed0011"]["sw"].plot(ax=ax, color="blue", alpha=0.7)
+cre["jed0011"]["lw"].plot(ax=ax, color="red", alpha=0.7)
 
-cre_interp_mean["jed0033"]["net"].plot(ax=ax, color="k", linestyle="-.", alpha=0.7)
-cre_interp_mean["jed0033"]["sw"].plot(ax=ax, color="blue", linestyle="-.", alpha=0.7)
-cre_interp_mean["jed0033"]["lw"].plot(ax=ax, color="red", linestyle="-.", alpha=0.7)
+cre["jed0033"]["net"].plot(ax=ax, color="k", linestyle="-.", alpha=0.7)
+cre["jed0033"]["sw"].plot(ax=ax, color="blue", linestyle="-.", alpha=0.7)
+cre["jed0033"]["lw"].plot(ax=ax, color="red", linestyle="-.", alpha=0.7)
 
-cre_interp_mean["jed0022"]["net"].plot(ax=ax, color="k", linestyle="--", alpha=0.7)
-cre_interp_mean["jed0022"]["sw"].plot(ax=ax, color="blue", linestyle="--", alpha=0.7)
-cre_interp_mean["jed0022"]["lw"].plot(ax=ax, color="red", linestyle="--", alpha=0.7)
+cre["jed0022"]["net"].plot(ax=ax, color="k", linestyle="--", alpha=0.7)
+cre["jed0022"]["sw"].plot(ax=ax, color="blue", linestyle="--", alpha=0.7)
+cre["jed0022"]["lw"].plot(ax=ax, color="red", linestyle="--", alpha=0.7)
 
 labels = ["Net", "SW", "LW", "control", "+2K", "+4K"]
 handles = [
@@ -106,20 +109,20 @@ fig.savefig(f"plots/feedback/{mode}/cre_iwp.png", dpi=300, bbox_inches="tight")
 fig, axes = plt.subplots(2, 1, figsize=(7, 5), sharex=True)
 
 
-(cre_interp_mean["jed0033"]["lw"] - cre_interp_mean["jed0011"]["lw"]).plot(
+(cre["jed0033"]["lw"] - cre["jed0011"]["lw"]).plot(
     ax=axes[0], color="orange", alpha=0.7, linestyle="-"
 )
-(cre_interp_mean["jed0022"]["lw"] - cre_interp_mean["jed0011"]["lw"]).plot(
+(cre["jed0022"]["lw"] - cre["jed0011"]["lw"]).plot(
     ax=axes[0], color="r", alpha=0.7, linestyle="-"
 )
-(cre_interp_mean["jed0033"]["sw"] - cre_interp_mean["jed0011"]["sw"]).plot(
+(cre["jed0033"]["sw"] - cre["jed0011"]["sw"]).plot(
     ax=axes[1], color="orange", alpha=0.7, linestyle="-"
 )
-(cre_interp_mean["jed0022"]["sw"] - cre_interp_mean["jed0011"]["sw"]).plot(
+(cre["jed0022"]["sw"] - cre["jed0011"]["sw"]).plot(
     ax=axes[1], color="r", alpha=0.7, linestyle="-"
 )
 
-labels = ["+2 K", "+4 K"]
+labels = ["+4 K", "+2 K"]
 handles = [
     plt.Line2D([0], [0], color="r", linestyle="-"),
     plt.Line2D([0], [0], color="orange", linestyle="-"),
@@ -146,11 +149,12 @@ cloudsat = cloudsat_raw.to_xarray().coarsen({"scnline": 3}, boundary="trim").mea
 
 # %% calculate iwp hist
 iwp_bins = np.logspace(-4, np.log10(40), 51)
-histograms = {}
-for run in runs:
-    iwp = datasets[run]["iwp"].where(masks_height[run])
-    histograms[run], edges = np.histogram(iwp, bins=iwp_bins, density=False)
-    histograms[run] = histograms[run] / len(iwp)
+coarse_hists = False
+if coarse_hists:
+    for run in runs:
+        iwp = datasets[run]["iwp"].where(masks_height[run])
+        histograms[run], edges = np.histogram(iwp, bins=iwp_bins, density=False)
+        histograms[run] = histograms[run] / len(iwp)
 
 histograms["cloudsat"], _ = np.histogram(
     cloudsat["ice_water_path"] / 1e3, bins=iwp_bins, density=False
@@ -162,7 +166,7 @@ fig, ax = plt.subplots(1, 1, figsize=(8, 5))
 ax.stairs(
     histograms["cloudsat"], edges, label="2C-ICE", color="k", linewidth=4, alpha=0.5
 )
-for run in ['jed0011']:
+for run in runs:
     ax.stairs(histograms[run], edges, label=line_labels[run], color=colors[run])
 
 ax.legend()
@@ -172,7 +176,7 @@ ax.set_ylabel("P($I$)")
 ax.set_xlabel("$I$ / kg m$^{-2}$")
 ax.set_xlim([1e-4, 40])
 ax.spines[["top", "right"]].set_visible(False)
-fig.savefig(f"plots/feedback/{mode}/iwp_hist_cont.png", dpi=300, bbox_inches="tight")
+fig.savefig(f"plots/feedback/{mode}/iwp_hist.png", dpi=300, bbox_inches="tight")
 
 # %% plot diff to control
 fig, ax = plt.subplots(1, 1, figsize=(8, 5))
@@ -195,9 +199,9 @@ cre_folded = {}
 const_iwp_folded = {}
 const_cre_folded = {}
 for run in runs:
-    cre_folded[run] = cre_interp_mean[run] * histograms[run]
-    const_iwp_folded[run] = cre_interp_mean[run] * histograms["jed0011"]
-    const_cre_folded[run] = cre_interp_mean["jed0011"] * histograms[run]
+    cre_folded[run] = cre[run] * histograms[run]
+    const_iwp_folded[run] = cre[run] * histograms["jed0011"]
+    const_cre_folded[run] = cre["jed0011"] * histograms[run]
 
 # %% plot folded CRE
 fig, ax = plt.subplots(figsize=(7, 4))
@@ -360,8 +364,17 @@ feedback_const_cre["jed0022"] = (
     cre_const_cre_integrated["jed0022"] - cre_const_cre_integrated["jed0011"]
 ) / 4
 
+# %% partition IWP feedback into area and opacity feedback 
+feedback_area = {}
+feedback_opacity = {}
+for run in runs[1:]:
+    g_cap = ((histograms[run] - histograms['jed0011']).sum() / histograms['jed0011'].sum())
+    g_prime = ((histograms[run] - histograms['jed0011']) / histograms['jed0011']) - g_cap
+    feedback_area[run] = cre_integrated['jed0011'] * g_cap / temp_deltas[run]
+    feedback_opacity[run] = (g_prime * histograms['jed0011'] * cre['jed0011']).sum() / temp_deltas[run]
+
 # %% plot integrated CRE and feedback
-fig, axes = plt.subplots(1, 3, figsize=(9, 4), sharex=True, sharey=True)
+fig, axes = plt.subplots(1, 3, figsize=(11, 4), sharey=True, width_ratios=[1, 1, 1.5])
 
 
 axes[0].scatter(0, feedback["jed0033"]["lw"].values, color="red", marker="x")
@@ -431,14 +444,27 @@ axes[2].scatter(
     marker="o",
     facecolors="none",
 )
+axes[2].scatter(2.5, feedback_area["jed0033"]['net'].values, color="k", marker="x")
+axes[2].scatter(
+    2.5, feedback_area["jed0022"]['net'].values, color="k", marker="o", facecolors="none"
+)
+axes[2].scatter(3, feedback_opacity["jed0033"]['net'].values, color="k", marker="x")
+axes[2].scatter(
+    3, feedback_opacity["jed0022"]['net'].values, color="k", marker="o", facecolors="none"
+)
 axes[2].set_title("IWP Change")
 
-for ax in axes:
+for ax in axes[:-1]:
     ax.set_xticks([0, 1, 2])
     ax.set_yticks([-0.3, 0, 0.3, 0.6])
     ax.set_xticklabels(["LW", "SW", "Net"])
     ax.spines[["top", "right"]].set_visible(False)
     ax.axhline(0, color="grey", linestyle="--", linewidth=0.8)
+
+axes[2].set_xticks([0, 1, 2, 2.5, 3])
+axes[2].set_xticklabels(["LW", "SW", "Net", "Area", "Opacity"])
+axes[2].spines[["top", "right"]].set_visible(False)
+axes[2].axhline(0, color="grey", linestyle="--", linewidth=0.8)
 
 
 axes[0].set_ylabel("$F$ / W m$^{-2}$ K$^{-1}$")
