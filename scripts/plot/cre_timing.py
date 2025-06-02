@@ -4,126 +4,32 @@ import matplotlib.pyplot as plt
 from src.calc_variables import calc_cre
 import numpy as np
 from scipy.optimize import curve_fit
-import metpy.calc as mpcalc
-from metpy.units import units
-from tqdm import tqdm
-
+from src.read_data import load_random_datasets, load_cape_cin, load_vgrid
 # %% load CRE data
 runs = ["jed0011", "jed0033", "jed0022"]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 colors = {"jed0011": "k", "jed0022": "red", "jed0033": "orange"}
-cre_interp_mean = {}
-cre_arr = {}
-cre_arr_interp = {}
-datasets = {}
-for run in runs:
-    cre_interp_mean[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_interp_raw.nc"
-    )
-    datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
-    )
-    cape_cin = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_cape_cin.nc"
-    )
-    datasets[run] = datasets[run].assign(
-        cape=cape_cin["cape"],
-        cin=cape_cin["cin"],
-    )
-vgrid = (
-    xr.open_dataset(
-        "/work/bm1183/m301049/icon-mpim/experiments/jed0001/atm_vgrid_angel.nc"
-    )
-    .mean("ncells")
-    .rename({"height_2": "height", "height": "height_2"})
-)
+iwp_bins = np.logspace(-4, np.log10(40), 51)
+datasets = load_random_datasets()
+vgrid = load_vgrid()
+ds_cape = load_cape_cin()
+
+
 
 # %% difference in SW down for I>1
 for run in runs:
     sw_down = datasets[run]["rsdt"].where(datasets[run]["iwp"] > 1).mean()
     print(f"{run} {sw_down.values}")
 
-# %% calculate cre clearsky and wetsky
-for run in runs:
-    cre_net, cre_sw, cre_lw = calc_cre(datasets[run], mode="clearsky")
-    datasets[run] = datasets[run].assign(
-        cre_net_cs=cre_net, cre_sw_cs=cre_sw, cre_lw_cs=cre_lw
-    )
-    cre_net, cre_sw, cre_lw = calc_cre(datasets[run], mode="wetsky")
-    datasets[run] = datasets[run].assign(
-        cre_net_ws=cre_net, cre_sw_ws=cre_sw, cre_lw_ws=cre_lw
-    )
-# %% assign local time
-for run in runs:
-    datasets[run] = datasets[run].assign(
-        time_local=lambda d: d.time.dt.hour + (d.clon / 15)
-    )
-    datasets[run]["time_local"] = (
-        datasets[run]["time_local"]
-        .where(datasets[run]["time_local"] < 24, datasets[run]["time_local"] - 24)
-        .where(datasets[run]["time_local"] > 0, datasets[run]["time_local"] + 24)
-    )
-    datasets[run]["time_local"].attrs = {"units": "h", "long_name": "Local time"}
-
-
-# %% calculate cre high clouds
-for run in runs:
-    datasets[run] = datasets[run].assign(
-        cre_net_hc=xr.where(
-            datasets[run]["mask_low_cloud"],
-            datasets[run]["cre_net_ws"],
-            datasets[run]["cre_net_cs"],
-        )
-    )
-    datasets[run]["cre_net_hc"].attrs = {
-        "units": "W m^-2",
-        "long_name": "Net High Cloud Radiative Effect",
-    }
-    datasets[run] = datasets[run].assign(
-        cre_sw_hc=xr.where(
-            datasets[run]["mask_low_cloud"],
-            datasets[run]["cre_sw_ws"],
-            datasets[run]["cre_sw_cs"],
-        )
-    )
-    datasets[run]["cre_sw_hc"].attrs = {
-        "units": "W m^-2",
-        "long_name": "Shortwave High Cloud Radiative Effect",
-    }
-    datasets[run] = datasets[run].assign(
-        cre_lw_hc=xr.where(
-            datasets[run]["mask_low_cloud"],
-            datasets[run]["cre_lw_ws"],
-            datasets[run]["cre_lw_cs"],
-        )
-    )
-    datasets[run]["cre_lw_hc"].attrs = {
-        "units": "W m^-2",
-        "long_name": "Longwave High Cloud Radiative Effect",
-    }
-
-
-# %%
+# %% bin quantities
 iwp_bins = np.logspace(-4, np.log10(40), 31)
 iwp_points = (iwp_bins[:-1] + iwp_bins[1:]) / 2
-cre_net_hc_binned = {}
-cre_sw_hc_binned = {}
-cre_lw_hc_binned = {}
 time_binned = {}
 rad_time_binned = {}
 sw_down_binned = {}
 lat_binned = {}
 time_std = {}
 for run in runs:
-    cre_net_hc_binned[run] = (
-        datasets[run]["cre_net_hc"].groupby_bins(datasets[run]["iwp"], iwp_bins).mean()
-    )
-    cre_sw_hc_binned[run] = (
-        datasets[run]["cre_sw_hc"].groupby_bins(datasets[run]["iwp"], iwp_bins).mean()
-    )
-    cre_lw_hc_binned[run] = (
-        datasets[run]["cre_lw_hc"].groupby_bins(datasets[run]["iwp"], iwp_bins).mean()
-    )
     time_binned[run] = (
         datasets[run]["time_local"].groupby_bins(datasets[run]["iwp"], iwp_bins).mean()
     )
@@ -140,81 +46,6 @@ for run in runs:
         .groupby_bins(datasets[run]["iwp"], iwp_bins)
         .mean()
     )
-
-# %% plot cre net wit and without interpolation
-fig, ax = plt.subplots()
-
-cre_interp_mean["jed0011"]["net"].plot(
-    ax=ax, label="interpolated", color="k", linestyle="-"
-)
-cre_net_hc_binned["jed0011"].plot(ax=ax, label="binned", color="k", linestyle="--")
-cre_interp_mean["jed0011"]["sw"].plot(
-    ax=ax, label="interpolated", color="blue", linestyle="-"
-)
-cre_sw_hc_binned["jed0011"].plot(ax=ax, label="binned", color="blue", linestyle="--")
-cre_interp_mean["jed0011"]["lw"].plot(
-    ax=ax, label="interpolated", color="red", linestyle="-"
-)
-cre_lw_hc_binned["jed0011"].plot(ax=ax, label="binned", color="red", linestyle="--")
-
-ax.set_xscale("log")
-ax.set_xlabel("$I$ / $kg m^{-2}$")
-ax.set_ylabel("$C(I)$ / $W m^{-2}$")
-ax.set_xlim([1e-4, 40])
-ax.spines[["top", "right"]].set_visible(False)
-
-labels = ["Daily Mean CRE", "Real CRE"]
-handles = [
-    plt.Line2D([0], [0], color="grey", linestyle="-"),
-    plt.Line2D([0], [0], color="grey", linestyle="--"),
-]
-ax.legend(handles, labels)
-fig.savefig("plots/cre/cre_interp_vs_binned.png")
-
-
-# %% compare CRE
-linestyles = {
-    "jed0011": "-",
-    "jed0022": "--",
-    "jed0033": ":",
-}
-fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-for run in runs:
-    cre_net_hc_binned[run].plot(
-        ax=ax,
-        label=exp_name[run],
-        color="k",
-        linestyle=linestyles[run],
-        alpha=0.5,
-    )
-    cre_sw_hc_binned[run].plot(
-        ax=ax,
-        label=exp_name[run],
-        color="blue",
-        linestyle=linestyles[run],
-        alpha=0.5,
-    )
-    cre_lw_hc_binned[run].plot(
-        ax=ax,
-        label=exp_name[run],
-        color="red",
-        linestyle=linestyles[run],
-        alpha=0.5,
-    )
-ax.set_xscale("log")
-ax.set_xlim([1e-4, 10])
-
-# %% plot time local
-fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-datasets["jed0011"]["time_local"].groupby_bins(
-    datasets["jed0011"]["iwp"], iwp_bins
-).mean().sel(iwp_bins=slice(1e-4, 10)).plot(ax=ax, color="k")
-
-ax.set_xscale("log")
-ax.set_xlabel("$I$ / $kg m^{-2}$")
-ax.set_ylabel("Time Local / h")
-ax.spines[["top", "right"]].set_visible(False)
-fig.savefig("plots/cre/time_local.png")
 
 # %% plot mean time and SW down
 fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharex=True)
@@ -268,22 +99,6 @@ for ax in axes:
 
 fig.savefig("plots/cre/timing_diff.png")
 
-# %% plot dist of time_local for high IWP
-for run in runs:
-    hist, edges = np.histogram(
-        datasets[run]["time_local"].where(datasets[run]["iwp"] > 1e0),
-        np.arange(0, 25, 1),
-        density=False,
-    )
-    hist = hist / hist.sum()
-    ax.stairs(
-        hist,
-        edges,
-        label=exp_name[run],
-        color=colors[run],
-        alpha=0.5,
-    )
-
 
 # %% fit sin to daily cycle
 def sin_func(x, a, b, c):
@@ -299,9 +114,8 @@ for run in runs:
     hist, edges = np.histogram(
         datasets[run]["time_local"].where(datasets[run]["iwp"] > 1e0),
         bins,
-        density=False,
+        density=True,
     )
-    hist = hist / hist.sum()
     options = {"ftol": 1e-15}  # Adjust as needed
     popt, pcov = curve_fit(
         sin_func, x, hist, p0=[0.00517711, 1, 0.30754356], method="trf", **options
@@ -323,6 +137,7 @@ handles = [
     plt.Line2D([0], [0], color="grey", linestyle="-"),
 ]
 ax.legend(handles, labels)
+ax.set_title("Frequency of IWP > 1 kg m$^{-2}$")
 fig.tight_layout()
 fig.savefig("plots/timing/daily_cycle.png")
 
@@ -375,22 +190,46 @@ handles = [
     plt.Line2D([0], [0], color="grey", linestyle="-"),
 ]
 ax.legend(handles, labels)
+ax.set_title("Frequency of Upward Velocities > 99th Percentile")
 fig.tight_layout()
 fig.savefig("plots/timing/daily_cycle_wa.png")
 
-# %% plot correlation of iwp and wa
-fig, axes = plt.subplots(1, 3, figsize=(10, 5))
-for i, run in enumerate(runs):
-    mask = datasets[run]["iwp"] > 1e0
-    axes[i].scatter(
-        datasets[run]["iwp"].where(mask),
-        datasets[run]["wa"].where(mask).isel(height_2=height),
-        color=colors[run],
-        s=0.1,
-        alpha=0.5,
-    )
-    axes[i].set_xscale("log")
+# %% fit sin to daily cycle of precip 
+parameters_pr = {}
 
+fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+bins = np.arange(0, 25, 1)
+x = (bins[:-1] + bins[1:]) / 2
+for run in runs:
+    hist, edges = np.histogram(
+        datasets[run]["time_local"].where(datasets[run]['pr']> datasets[run]['pr'].quantile(0.99)),
+        bins,
+        density=True,
+    )
+    options = {"ftol": 1e-15}  # Adjust as needed
+    popt, pcov = curve_fit(
+        sin_func, x, hist, p0=[0.00517711, 1, 0.30754356], method="trf", **options
+    )
+    parameters_pr[run] = popt
+    ax.stairs(hist, edges, label=exp_name[run], color=colors[run])
+    ax.plot(bins, sin_func(bins, *popt), color=colors[run], linestyle="--")
+ax.set_xlim([0.1, 23.9])
+ax.set_ylim([0.03, 0.06])
+ax.spines[["top", "right"]].set_visible(False)
+ax.set_xlabel("Local Time / h")
+ax.set_ylabel("Probability")
+labels = ["Control", "+2 K", "+4 K", "Sinus Fit", "Histogram"]
+handles = [
+    plt.Line2D([0], [0], color="k", linestyle="-"),
+    plt.Line2D([0], [0], color="orange", linestyle="-"),
+    plt.Line2D([0], [0], color="red", linestyle="-"),
+    plt.Line2D([0], [0], color="grey", linestyle="--"),
+    plt.Line2D([0], [0], color="grey", linestyle="-"),
+]
+ax.legend(handles, labels)
+ax.set_title("Frequency of Precipitation > 99th Percentile")
+fig.tight_layout()
+fig.savefig("plots/timing/daily_cycle_pr.png")
 
 # %% plot phase and amplitude of iwp fits
 fig, axes = plt.subplots(2, 1, figsize=(4, 5))
@@ -423,7 +262,34 @@ axes[1].set_xlabel("Temperature Change / K")
 fig.tight_layout()
 fig.savefig("plots/timing/daily_cycle_fit.png")
 
-# %% compare phase of iwp ans wa
+# %% compare phase of iwp and wa 
+fig, ax = plt.subplots(1, 1, figsize=(4, 4))
+x = [1, 2, 3]
+for i, run in enumerate(["jed0011", "jed0033", "jed0022"]):
+    ax.scatter(
+        x[i],
+        6 - parameters_wa[run][1],
+        color=colors[run],
+        label=exp_name[run],
+        marker="o"
+    )
+    ax.scatter(
+        x[i],
+        6 - parameters_iwp[run][1],
+        color=colors[run],
+        label=exp_name[run],
+        marker="x"
+    )
+ax.spines[["top", "right"]].set_visible(False)
+ax.set_xticks(x)
+ax.set_xticklabels(['Control', '+2 K', '+4 K'])
+ax.set_ylabel("Daily Maximum / h")
+handles = [
+    plt.Line2D([0], [0], color="grey", marker="o", linestyle=""),
+    plt.Line2D([0], [0], color="grey", marker="x", linestyle=""),
+]
+labels = ["$W > P_{\mathrm{99}}(W)$", "IWP > 1 kg m$^{-2}$"]
+ax.legend(handles, labels)
 
 
 # %% look at CAPE and CIN vs IWP
@@ -464,7 +330,7 @@ for run in runs:
     )
 # %% plot upward velocity at 6 km binned by IWP
 fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-
+height = np.abs((vgrid["zghalf"] - 6e3)).argmin(dim="height_2").values
 for run in runs:
     datasets[run]["wa"].isel(height_2=height).groupby_bins(
         datasets[run]["iwp"], iwp_bins

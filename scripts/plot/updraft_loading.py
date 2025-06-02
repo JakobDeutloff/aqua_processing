@@ -2,13 +2,10 @@
 import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
-from src.grid_helpers import merge_grid, fix_time
-import pickle as pkl
+from src.read_data import load_daily_2d_data
 
 # %% load data
 runs = ["jed0011", "jed0022", "jed0033"]
-followups = {"jed0011": "jed0111", "jed0022": "jed0222", "jed0033": "jed0333"}
-configs = {"jed0011": "icon-mpim", "jed0022": "icon-mpim-4K", "jed0033": "icon-mpim-2K"}
 colors = {
     "jed0011": "k",
     "jed0022": "r",
@@ -19,43 +16,23 @@ t_deltas = {
     "jed0022": 4,
     "jed0033": 2,
 }
-datasets = {}
-for run in runs:
-    ds_first_month = (
-        xr.open_mfdataset(
-            f"/work/bm1183/m301049/{configs[run]}/experiments/{run}/{run}_atm_2d_19*.nc"
-        )
-        .pipe(merge_grid)
-        .pipe(fix_time)[["clivi", "qsvi", "qgvi", "qrvi", 'cllvi']]
-    )
-    ds_first_month = ds_first_month.sel(
-        time=(ds_first_month.time.dt.minute == 0) & (ds_first_month.time.dt.hour == 0)
-    )
-    ds_last_two_months = (
-        xr.open_mfdataset(
-            f"/work/bm1183/m301049/{configs[run]}/experiments/{followups[run]}/{followups[run]}_atm_2d_19*.nc"
-        )
-        .pipe(merge_grid)
-        .pipe(fix_time)[["clivi", "qsvi", "qgvi", "qrvi", 'cllvi']]
-    )
-    ds_last_two_months = ds_last_two_months.sel(
-        time=(ds_last_two_months.time.dt.minute == 0)
-        & (ds_last_two_months.time.dt.hour == 0)
-    )
-    datasets[run] = xr.concat([ds_first_month, ds_last_two_months], dim="time").astype(float)
+datasets = load_daily_2d_data(
+    ["clivi", "qsvi", "qgvi", "cllvi", "qrvi", "pr"], "day", load=False
+)
 
 # %% calculate IWP
 for run in runs:
     print(run)
-    datasets[run] = (
-        datasets[run]
-        .where((datasets[run].clat < 20) & (datasets[run].clat > -20), drop=True)
-        .load()
-    )
+    datasets[run] = datasets[run].isel(time=slice(-30, None))
     datasets[run] = datasets[run].assign(
-        {"iwp": datasets[run]["clivi"] + datasets[run]["qsvi"] + datasets[run]["qgvi"], 
-         "lwp": datasets[run]["cllvi"] + datasets[run]["qrvi"]}
+        {
+            "iwp": datasets[run]["clivi"]
+            + datasets[run]["qsvi"]
+            + datasets[run]["qgvi"],
+            "lwp": datasets[run]["cllvi"] + datasets[run]["qrvi"],
+        }
     )
+    datasets[run] = datasets[run][["iwp", "lwp", "pr"]].load()
 
 
 # %% calculate IWP histograms
@@ -72,7 +49,7 @@ for run in runs:
 
 ax.set_xscale("log")
 
-# %% plot change relative to control 
+# %% plot change relative to control
 fig, axes = plt.subplots(2, 1, figsize=(8, 8), sharex=True)
 
 for run in runs[1:]:
@@ -91,29 +68,37 @@ for run in runs[1:]:
 
 axes[0].set_xscale("log")
 
-# %% calculate IWP and LWP percentiles 
+# %% calculate IWP and LWP percentiles
 percentiles = np.arange(95, 100, 0.005)
 iwp_percentiles = {}
 lwp_percentiles = {}
 for run in runs:
     print(run)
-    iwp_percentiles[run] = np.percentile(
-        datasets[run]["iwp"].values, percentiles
-    )
+    iwp_percentiles[run] = np.percentile(datasets[run]["iwp"].values, percentiles)
     iwp_percentiles[run] = xr.DataArray(
         iwp_percentiles[run], coords=[percentiles], dims=["percentiles"]
     )
     iwp_percentiles[run].attrs["units"] = "kg/m^2"
     iwp_percentiles[run].attrs["long_name"] = "IWP percentiles"
-    lwp_percentiles[run] = np.percentile(
-        datasets[run]["lwp"].values, percentiles
-    )
+    lwp_percentiles[run] = np.percentile(datasets[run]["lwp"].values, percentiles)
     lwp_percentiles[run] = xr.DataArray(
         lwp_percentiles[run], coords=[percentiles], dims=["percentiles"]
     )
     lwp_percentiles[run].attrs["units"] = "kg/m^2"
     lwp_percentiles[run].attrs["long_name"] = "LWP percentiles"
 
+# %% calculate precip efficiency
+pr = {}
+for run in runs:
+    mask = datasets[run]["iwp"] > 1
+    pr[run] = datasets[run]["pr"].where(mask).mean().values
+
+pr_increase = {}
+for run in runs[1:]:
+    pr_increase[run] = (pr[run] - pr[runs[0]])  * 100 / pr[runs[0]] / t_deltas[run]
+
+
+# %% 
 
 # %% plot iwp and lwp percentiles
 fig, axes = plt.subplots(2, 2, figsize=(8, 6))
@@ -134,19 +119,25 @@ for run in runs:
 for run in runs[1:]:
     axes[1, 0].plot(
         iwp_percentiles[run].percentiles,
-        (iwp_percentiles[run] - iwp_percentiles[runs[0]]) * 100 / iwp_percentiles[runs[0]] / t_deltas[run],
+        (iwp_percentiles[run] - iwp_percentiles[runs[0]])
+        * 100
+        / iwp_percentiles[runs[0]]
+        / t_deltas[run],
         label=run,
         color=colors[run],
     )
     axes[1, 1].plot(
         lwp_percentiles[run].percentiles,
-        (lwp_percentiles[run] - lwp_percentiles[runs[0]]) * 100 / lwp_percentiles[runs[0]] / t_deltas[run],
+        (lwp_percentiles[run] - lwp_percentiles[runs[0]])
+        * 100
+        / lwp_percentiles[runs[0]]
+        / t_deltas[run],
         label=run,
         color=colors[run],
     )
 
 for ax in axes[0, :]:
-    ax.set_yscale('log')
+    ax.set_yscale("log")
     ax.spines[["top", "right"]].set_visible(False)
 
 for ax in axes[1, :]:
@@ -155,10 +146,10 @@ for ax in axes[1, :]:
 
 axes[0, 0].set_ylabel("IWP / kg m$^{-2}$")
 axes[0, 1].set_ylabel("LWP / kg m$^{-2}$")
-axes[1, 0].set_ylabel('% / K')
-axes[1, 1].set_ylabel('% / K')
+axes[1, 0].set_ylabel("% / K")
+axes[1, 1].set_ylabel("% / K")
 axes[1, 0].set_xlabel("IWP Percentiles / %")
 axes[1, 1].set_xlabel("LWP Percentiles / %")
 
 fig.tight_layout()
-fig.savefig('plots/publication/iwp_lwp_percentiles.png', dpi=300, bbox_inches='tight')
+fig.savefig("plots/publication/iwp_lwp_percentiles.png", dpi=300, bbox_inches="tight")

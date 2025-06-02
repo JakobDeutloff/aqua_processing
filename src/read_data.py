@@ -1,5 +1,12 @@
 import xarray as xr
 import pickle
+from src.grid_helpers import merge_grid, fix_time
+
+runs = ["jed0011", "jed0022", "jed0033"]
+followups = {"jed0011": "jed0111", "jed0022": "jed0222", "jed0033": "jed0333"}
+configs = {"jed0011": "icon-mpim", "jed0022": "icon-mpim-4K", "jed0033": "icon-mpim-2K"}
+experiments = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
+
 
 def read_cloudsat(year):
     """
@@ -15,7 +22,8 @@ def read_cloudsat(year):
     # select tropics
     lat_mask = (cloudsat["lat"] <= 20) & (cloudsat["lat"] >= -20)
 
-    return cloudsat[lat_mask] 
+    return cloudsat[lat_mask]
+
 
 def load_parameters(run):
     """
@@ -47,6 +55,7 @@ def load_parameters(run):
         "a_cs": lower_trop_params["a_cs"],
     }
 
+
 def load_lt_quantities(run):
     """
     Load the lower tropospheric quantities needed for the model.
@@ -61,3 +70,219 @@ def load_lt_quantities(run):
         lt_quantities = pickle.load(f)
 
     return lt_quantities
+
+
+def load_iwp_hists():
+    """
+    Load the IWP histograms for the model.
+
+    Returns
+    -------
+    dict
+        Dictionary containing the IWP histograms.
+    """
+
+    with open("/work/bm1183/m301049/icon_hcap_data/iwp_dists.pkl", "rb") as f:
+        iwp_hists = pickle.load(f)
+
+    return iwp_hists
+
+
+def load_random_datasets(processed=True):
+    """
+    Load the random datasets for the model.
+
+    Parameters
+    ----------
+    processed : bool, optional
+        If True, load the processed datasets, otherwise load the raw datasets. Default is True.
+
+    Returns
+    -------
+    dict
+        Dictionary containing the random datasets.
+    """
+
+    datasets = {}
+    if processed:
+        for run in runs:
+            datasets[run] = xr.open_dataset(
+                f"/work/bm1183/m301049/icon_hcap_data/{experiments[run]}/production/random_sample/{run}_randsample_processed.nc"
+            )
+    else:
+        for run in runs:
+            datasets[run] = xr.open_dataset(
+                f"/work/bm1183/m301049/icon_hcap_data/{experiments[run]}/production/random_sample/{run}_randsample.nc"
+            )
+    return datasets
+
+
+def load_vgrid():
+    """
+    Load the vertical grid for the model.
+
+    Returns
+    -------
+    xarray.Dataset
+        Dataset containing the vertical grid.
+    """
+
+    vgrid = (
+        xr.open_dataset(
+            "/work/bm1183/m301049/icon-mpim/experiments/jed0001/atm_vgrid_angel.nc"
+        )
+        .mean("ncells")
+        .rename({"height": "height_2", "height_2": "height"})
+    )
+
+    return vgrid
+
+
+def load_cre():
+    """
+    Load  HCRE.
+
+    Returns
+    -------
+    dict
+        Dictionary containing the CRE data.
+    """
+
+    cre_data = {}
+    for run in runs:
+        cre_data[run] = xr.open_dataset(
+            f"/work/bm1183/m301049/icon_hcap_data/{experiments[run]}/production/cre/{run}_cre_raw.nc"
+        )
+
+    return cre_data
+
+
+def load_daily_2d_data(vars, frequency="day", tropics_only=True, load=True):
+    """
+    Load the one timestep per day 2D data.
+
+    Parameters
+    ----------
+    vars : list
+        List of variables to load.
+    frequency : str, optional
+        Frequency of the data, either 'day' or 'hour'. Default is 'day'.
+    tropics_only : bool, optional
+        If True, only load data for the tropics (latitude between -20 and 20). Default is True.
+    load : bool, optional
+        If True, load the data into memory. Default is True.
+
+    Returns
+    -------
+    dict
+        Dictionary containing the 2D data.
+    """
+    datasets = {}
+    for run in runs:
+        ds_first_month = (
+            xr.open_mfdataset(
+                f"/work/bm1183/m301049/{configs[run]}/experiments/{run}/{run}_atm_2d_19*.nc"
+            )
+            .pipe(merge_grid)
+            .pipe(fix_time)[vars]
+        )
+        ds_last_two_months = (
+            xr.open_mfdataset(
+                f"/work/bm1183/m301049/{configs[run]}/experiments/{followups[run]}/{followups[run]}_atm_2d_19*.nc"
+            )
+            .pipe(merge_grid)
+            .pipe(fix_time)[vars]
+        )
+        if frequency == "day":
+            ds_first_month = ds_first_month.sel(
+                time=(ds_first_month.time.dt.minute == 0)
+                & (ds_first_month.time.dt.hour == 0)
+            )
+            ds_last_two_months = ds_last_two_months.sel(
+                time=(ds_last_two_months.time.dt.minute == 0)
+                & (ds_last_two_months.time.dt.hour == 0)
+            )
+        elif frequency == "hour":
+            ds_first_month = ds_first_month.sel(
+                time=(ds_first_month.time.dt.minute == 0)
+            )
+            ds_last_two_months = ds_last_two_months.sel(
+                time=(ds_last_two_months.time.dt.minute == 0)
+            )
+
+        if tropics_only:
+            ds_first_month = ds_first_month.where(
+                (ds_first_month["clat"] < 20) & (ds_first_month["clat"] > -20),
+                drop=True,
+            )
+            ds_last_two_months = ds_last_two_months.where(
+                (ds_last_two_months["clat"] < 20) & (ds_last_two_months["clat"] > -20),
+                drop=True,
+            )
+
+
+        if load:
+            datasets[run] = xr.concat(
+                [ds_first_month, ds_last_two_months], dim="time"
+            ).load()
+        else:
+            datasets[run] = xr.concat(
+                [ds_first_month, ds_last_two_months], dim="time"
+            )
+    return datasets
+
+
+
+def load_daily_average_2d_data(vars):
+    """
+    Load the daily average 2D data.
+
+    Parameters
+    ----------
+    vars : list
+        List of variables to load.
+
+    Returns
+    -------
+    dict
+        Dictionary containing the daily average 2D data.
+    """
+    datasets = {}
+    for run in runs:
+        ds_first_month = (
+            xr.open_mfdataset(
+                f"/work/bm1183/m301049/{configs[run]}/experiments/{run}/{run}_atm_2d_daymean_19*.nc"
+            )
+            .pipe(merge_grid)
+            .pipe(fix_time)[vars]
+        )
+        ds_last_two_months = (
+            xr.open_mfdataset(
+                f"/work/bm1183/m301049/{configs[run]}/experiments/{followups[run]}/{followups[run]}_atm_2d_daymean_19*.nc"
+            )
+            .pipe(merge_grid)
+            .pipe(fix_time)[vars]
+        )
+        datasets[run] = xr.concat(
+            [ds_first_month, ds_last_two_months], dim="time"
+        ).load()
+
+    return datasets
+
+
+def load_cape_cin():
+    """
+    Load the CAPE and CIN data.
+
+    Returns
+    -------
+    dict
+        Dictionary containing the CAPE and CIN data.
+    """
+    cape_cin_data = {}
+    for run in runs:
+        cape_cin_data[run] = xr.open_dataset(
+            f"/work/bm1183/m301049/icon_hcap_data/{experiments[run]}/production/random_sample/{run}_cape_cin.nc"
+        )
+
+    return cape_cin_data

@@ -2,68 +2,22 @@
 import matplotlib.pyplot as plt
 import xarray as xr
 import numpy as np
-from src.read_data import read_cloudsat
+from src.read_data import read_cloudsat, load_iwp_hists, load_cre, load_random_datasets
 import pickle as pkl
 
 # %% load data
 runs = ["jed0011", "jed0022", "jed0033"]
-exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 colors = {"jed0011": "k", "jed0022": "red", "jed0033": "orange"}
 line_labels = {
     "jed0011": "Control",
     "jed0022": "+4 K",
     "jed0033": "+2 K",
 }
-datasets = {}
-cre = {}
-with open('/work/bm1183/m301049/icon_hcap_data/iwp_dists.pkl', 'rb') as f:
-    histograms = pkl.load(f)
-for run in runs:
-    datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
-    )
-    cre[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_raw.nc"
-    )
+mode = 'raw'
+datasets = load_random_datasets(processed=True)
+histograms = load_iwp_hists()
+cre = load_cre()
 
-# %% calculate masks
-mode = "raw"
-mask_type = "raw"
-masks_height = {}
-
-if mask_type == "raw":
-    for run in runs:
-        masks_height[run] = True
-elif mask_type == "simple_filter":
-    for run in runs:
-        masks_height[run] = datasets[run]["hc_top_temperature"] < (273.15 - 35)
-elif mask_type == "dist_filter":
-    masks_height = {}
-    iwp_bins = np.logspace(-4, np.log10(40), 51)
-    masks_height["jed0011"] = datasets["jed0011"]["hc_top_temperature"] < datasets[
-        "jed0011"
-    ]["hc_top_temperature"].where(datasets["jed0011"]["iwp"] > 1e-4).quantile(0.90)
-    quantiles = (
-        (masks_height["jed0011"] * 1)
-        .groupby_bins(datasets["jed0011"]["iwp"], iwp_bins)
-        .mean()
-    )
-
-    for run in runs[1:]:
-        mask = xr.DataArray(
-            np.ones_like(datasets[run]["hc_top_temperature"]),
-            dims=datasets[run]["hc_top_temperature"].dims,
-            coords=datasets[run]["hc_top_temperature"].coords,
-        )
-        for i in range(len(iwp_bins) - 1):
-            mask_ds = (datasets[run]["iwp"] > iwp_bins[i]) & (
-                datasets[run]["iwp"] <= iwp_bins[i + 1]
-            )
-            temp_vals = datasets[run]["hc_top_temperature"].where(mask_ds)
-            mask_temp = temp_vals > temp_vals.quantile(quantiles[i])
-            # mask n_masked values with the highest temperatures from temp_vals
-            mask = xr.where(mask_ds & mask_temp, 0, mask)
-        masks_height[run] = mask
 
 # %% plot CRE
 fig, ax = plt.subplots(figsize=(7, 4))
@@ -152,7 +106,7 @@ iwp_bins = np.logspace(-4, np.log10(40), 51)
 coarse_hists = False
 if coarse_hists:
     for run in runs:
-        iwp = datasets[run]["iwp"].where(masks_height[run])
+        iwp = datasets[run]["iwp"]
         histograms[run], edges = np.histogram(iwp, bins=iwp_bins, density=False)
         histograms[run] = histograms[run] / len(iwp)
 
@@ -307,7 +261,7 @@ for run in ["jed0022", "jed0033"]:
         / temp_deltas[run],
         edges,
         color="k",
-        label=exp_name[run],
+        label=line_labels[run],
         linestyle=linestyles[run],
     )
     axes[2].set_ylabel(r"$F_{\mathrm{CRE}}(I)$ / W m$^{-2}$ K$^{-1}$")
