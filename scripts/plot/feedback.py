@@ -1,9 +1,7 @@
 # %%
 import matplotlib.pyplot as plt
-import xarray as xr
 import numpy as np
 from src.read_data import read_cloudsat, load_iwp_hists, load_cre, load_random_datasets
-import pickle as pkl
 
 # %% load data
 runs = ["jed0011", "jed0022", "jed0033"]
@@ -110,7 +108,7 @@ if coarse_hists:
         histograms[run], edges = np.histogram(iwp, bins=iwp_bins, density=False)
         histograms[run] = histograms[run] / len(iwp)
 
-histograms["cloudsat"], _ = np.histogram(
+histograms["cloudsat"], edges = np.histogram(
     cloudsat["ice_water_path"] / 1e3, bins=iwp_bins, density=False
 )
 histograms["cloudsat"] = histograms["cloudsat"] / len(cloudsat["ice_water_path"])
@@ -148,6 +146,7 @@ ax.spines[["top", "right"]].set_visible(False)
 fig.savefig(
     f"plots/feedback/{mode}/iwp_hist_diff.png", dpi=300, bbox_inches="tight"
 )
+
 # %% multiply CRE and iwp hist
 cre_folded = {}
 const_iwp_folded = {}

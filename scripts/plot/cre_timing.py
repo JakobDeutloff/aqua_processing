@@ -15,7 +15,6 @@ vgrid = load_vgrid()
 ds_cape = load_cape_cin()
 
 
-
 # %% difference in SW down for I>1
 for run in runs:
     sw_down = datasets[run]["rsdt"].where(datasets[run]["iwp"] > 1).mean()

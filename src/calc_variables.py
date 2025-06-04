@@ -1,9 +1,7 @@
 import numpy as np
 import xarray as xr
 from scipy.interpolate import griddata
-import multiprocessing as mp
-from tqdm import tqdm
-from functools import partial
+from scipy.interpolate import UnivariateSpline
 
 
 def calculate_hc_temperature(ds, IWP_emission=7.3e-3):
@@ -412,6 +410,7 @@ def calc_w_sub(net_hr, stab):
 
 
 def calc_conv(wsub, zg, z_var="temp"):
+    
     conv = -wsub.diff(z_var) / (
         zg.interp(temp=wsub["temp"], method="linear").diff(z_var).values
     )

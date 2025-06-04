@@ -1,0 +1,253 @@
+# %%
+import matplotlib.pyplot as plt
+import numpy as np
+from src.read_data import load_iwp_hists, load_cre, load_random_datasets
+
+# %% load data
+runs = ["jed0011", "jed0022", "jed0033"]
+colors_fluxes = {
+    "lw": "red",
+    "sw": "blue",
+    "net": "k",
+}
+line_labels = {
+    "jed0011": "Control",
+    "jed0022": "+4 K",
+    "jed0033": "+2 K",
+}
+markers = {
+    "jed0022": 'o', 
+    "jed0033": 'x',
+}
+facecolors = {
+    "jed0022": "none", 
+    "jed0033": None
+}
+xpos = {
+    "lw": 0, 
+    "sw": 1,
+    "net": 2,
+}
+temp_deltas = {"jed0022": 4, "jed0033": 2}
+linestyles = {"jed0022": "-", "jed0033": "--"}
+iwp_bins = np.logspace(-4, np.log10(40), 51)
+iwp_points = (iwp_bins[:-1] + iwp_bins[1:]) / 2 
+mode = "raw"
+datasets = load_random_datasets(processed=True)
+histograms = load_iwp_hists()
+cre = load_cre()
+# %% multiply CRE and iwp hist
+cre_folded = {}
+const_iwp_folded = {}
+const_cre_folded = {}
+for run in runs:
+    cre_folded[run] = cre[run] * histograms[run]
+    const_iwp_folded[run] = cre[run] * histograms["jed0011"]
+    const_cre_folded[run] = cre["jed0011"] * histograms[run]
+# %% calculate integrated CRE and feedback
+cre_integrated = {}
+cre_const_iwp_integrated = {}
+cre_const_cre_integrated = {}
+feedback = {}
+feedback_const_iwp = {}
+feedback_const_cre = {}
+
+for run in runs:
+    cre_integrated[run] = cre_folded[run].sum(dim="iwp")
+    cre_const_iwp_integrated[run] = const_iwp_folded[run].sum(dim="iwp")
+    cre_const_cre_integrated[run] = const_cre_folded[run].sum(dim="iwp")
+
+
+feedback["jed0033"] = (cre_integrated["jed0033"] - cre_integrated["jed0011"]) / 2
+feedback["jed0022"] = (cre_integrated["jed0022"] - cre_integrated["jed0011"]) / 4
+feedback_const_iwp["jed0033"] = (
+    cre_const_iwp_integrated["jed0033"] - cre_const_iwp_integrated["jed0011"]
+) / 2
+feedback_const_iwp["jed0022"] = (
+    cre_const_iwp_integrated["jed0022"] - cre_const_iwp_integrated["jed0011"]
+) / 4
+feedback_const_cre["jed0033"] = (
+    cre_const_cre_integrated["jed0033"] - cre_const_cre_integrated["jed0011"]
+) / 2
+feedback_const_cre["jed0022"] = (
+    cre_const_cre_integrated["jed0022"] - cre_const_cre_integrated["jed0011"]
+) / 4
+# %% partition IWP feedback into area and opacity feedback
+feedback_area = {}
+feedback_opacity = {}
+for run in runs[1:]:
+    g_cap = (histograms[run] - histograms["jed0011"]).sum() / histograms[
+        "jed0011"
+    ].sum()
+    g_prime = (
+        (histograms[run] - histograms["jed0011"]) / histograms["jed0011"]
+    ) - g_cap
+    feedback_area[run] = cre_integrated["jed0011"] * g_cap / temp_deltas[run]
+    feedback_opacity[run] = (
+        g_prime * histograms["jed0011"] * cre["jed0011"]
+    ).sum() / temp_deltas[run]
+
+# %% plot
+fig, axes = plt.subplots(3, 3, figsize=(12, 10), width_ratios=[3, 1, 0.3], constrained_layout=True)
+
+
+for run in runs[1:]:
+
+    for flux in ["lw", "sw", 'net']:
+        # IWP resolved Feedback 
+        axes[0, 0].plot(
+            iwp_points,
+            (const_iwp_folded[run][flux].values
+            - const_iwp_folded["jed0011"][flux].values) / temp_deltas[run],
+            color=colors_fluxes[flux],
+            linestyle=linestyles[run],
+        )
+        axes[1, 0].plot(
+            iwp_points,
+            (const_cre_folded[run][flux].values
+            - const_cre_folded["jed0011"][flux].values) / temp_deltas[run],
+            color=colors_fluxes[flux],
+            linestyle=linestyles[run],
+        )
+        axes[2, 0].plot(
+            iwp_points,
+            (cre_folded[run][flux].values - cre_folded["jed0011"][flux].values)/temp_deltas[run],
+            color=colors_fluxes[flux],
+            linestyle=linestyles[run],
+        )
+        # Integrated Feedback 
+        axes[0, 1].scatter(
+            xpos[flux],
+            feedback_const_iwp[run][flux].values,
+            color=colors_fluxes[flux],
+            marker=markers[run],
+            facecolor=facecolors[run],
+        )
+        axes[1, 1].scatter(
+            xpos[flux],
+            feedback_const_cre[run][flux].values,
+            color=colors_fluxes[flux],
+            marker=markers[run],
+            facecolor=facecolors[run],
+        )
+        axes[2, 1].scatter(
+            xpos[flux],
+            feedback[run][flux].values,
+            color=colors_fluxes[flux],
+            marker=markers[run],
+            facecolor=facecolors[run],
+        )
+
+
+    # plot area and opacity feedback
+    axes[1, 2].scatter(
+        0, 
+        feedback_area[run]['net'].values,
+        color="k",
+        marker=markers[run],
+        facecolor=facecolors[run],
+    )
+    axes[1, 2].scatter(
+        1, 
+        feedback_opacity[run]['net'].values,
+        color="k",
+        marker=markers[run],
+        facecolor=facecolors[run],
+    )
+
+
+axes[0, 0].set_ylabel(r"$F_{\mathrm{CRE}}(I)$ / W m$^{-2}$ K$^{-1}$")
+axes[1, 0].set_ylabel(r"$F_{\mathrm{IWP}}(I)$ / W m$^{-2}$ K$^{-1}$")
+axes[2, 0].set_ylabel(r"$F(I)$ / W m$^{-2}$ K$^{-1}$")
+axes[2, 0].set_xlabel(r"$I$ / kg m$^{-2}$")
+axes[0, 1].set_ylabel(r"$F_{\mathrm{CRE}}$ / W m$^{-2}$ K$^{-1}$")
+axes[1, 1].set_ylabel(r"$F_{\mathrm{IWP}}$ / W m$^{-2}$ K$^{-1}$")
+axes[2, 1].set_ylabel(r"$F$ / W m$^{-2}$ K$^{-1}$")
+
+# make legends
+handles = [
+    plt.Line2D([0], [0], color=colors_fluxes["lw"]),
+    plt.Line2D([0], [0], color=colors_fluxes["sw"]),
+    plt.Line2D([0], [0], color=colors_fluxes["net"]),
+    plt.Line2D([0], [0], color='grey', linestyle='-'),
+    plt.Line2D([0], [0], color='grey', linestyle='--'),
+]
+labels = [
+    "LW",
+    "SW",
+    "NET",
+    "+4 K",
+    "+2 K",
+]
+
+fig.legend(
+    handles,
+    labels,
+    ncol=5,
+    bbox_to_anchor=(0.55, 0),
+    frameon=False,
+)
+
+handles=[
+    axes[2, 2].scatter([0], [0], color="grey", marker='x', linestyle=''),
+    axes[2, 2].scatter([0], [0], color="grey", marker='o', linestyle='', facecolors='none'),
+]
+labels = [
+    "+2 K",
+    "+4 K",
+]
+fig.legend(
+    handles,
+    labels,
+    ncol=2,
+    bbox_to_anchor=(0.73, 0),
+    loc="upper left",
+    frameon=False,
+)
+
+# configure axes 
+axes[0, 2].remove()
+axes[2, 2].remove()
+
+for ax in axes[:, 0]:
+    ax.axhline(0, color="k", linewidth=0.5)
+    ax.set_xscale("log")
+    ax.set_xlim(1e-4, 20)
+    ax.set_ylim([-0.025, 0.045])
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.set_yticks([-0.02, 0, 0.02, 0.04])
+
+for ax in axes[:, 1]:
+    ax.axhline(0, color="k", linewidth=0.5)
+    ax.set_ylim([-0.5, 0.7])
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.set_yticks([-0.3, 0, 0.3, 0.6])
+    ax.set_xticks([0, 1, 2])
+    ax.set_xlim([-0.3, 2.3])
+    ax.set_xticklabels(["LW", "SW", "NET"])
+
+axes[1, 2].set_ylim([-0.5, 0.7])
+axes[1, 2].set_yticks([-0.3, 0, 0.3, 0.6])
+axes[1, 2].set_yticklabels([])
+axes[1, 2].set_xticks([0, 1])
+axes[1, 2].set_xlim([-0.2, 1.2])
+axes[1, 2].spines[["top", "right"]].set_visible(False) 
+axes[1, 2].axhline(0, color="k", linewidth=0.5)
+axes[1, 2].set_xticklabels(["Area", "Opacity"], rotation=-45)
+
+# add letters
+a = list(axes[:, 0:2].flatten())
+a.append(axes[1, 2])
+for i, ax in enumerate(a):
+    ax.text(
+        0.03,
+        1,
+        chr(97 + i),
+        transform=ax.transAxes,
+        fontsize=14,
+        fontweight="bold",
+    )
+
+
+fig.savefig('plots/publication/figure6.pdf', bbox_inches='tight')
+# %%

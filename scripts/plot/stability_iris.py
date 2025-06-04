@@ -17,7 +17,7 @@ colors = {"jed0011": "k", "jed0022": "r", "jed0033": "orange"}
 datasets = {}
 for run in runs:
     datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_20.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample.nc"
     ).sel(index=slice(0, 1e6))
 vgrid = (
     xr.open_dataset(
@@ -38,7 +38,7 @@ for run in runs:
     height_trop[run] = datasets[run]["height"].isel(height=idx_trop[run])
     masks_clearsky[run] = (
         datasets[run]["clivi"] + datasets[run]["qsvi"] + datasets[run]["qgvi"]
-    ) < 1e-1
+    ) < 1e-2
     mask_trop[run] = datasets[run]["height"] > height_trop[run]
 
 # %% calculte stability iris parameters from instantaneous values
@@ -157,7 +157,7 @@ ax.set_xlabel("Lapse rate / K m$^{-1}$")
 
 # %% look at real clear-sky convergence
 conv_real = {}
-for run in ["jed0011", "jed0022"]:
+for run in runs:
     conv_real[run] = (
         (
             datasets[run]["wa"].diff("height_2")
@@ -173,7 +173,7 @@ mask_conv_real = (
 
 fig, ax = plt.subplots(1, 1, figsize=(4, 6))
 
-for run in ["jed0011", "jed0022"]:
+for run in runs:
     mean_temp = (
         datasets[run]["ta"].where(masks_clearsky[run] & mask_trop[run]).mean("index")
     )
@@ -185,7 +185,6 @@ for run in ["jed0011", "jed0022"]:
     )
     ax.invert_yaxis()
     ax.set_ylim([260, 200])
-    ax.set_xlim([-0.2, 0.3])
     ax.spines[["top", "right"]].set_visible(False)
     ax.set_ylabel("Temperature / K")
     ax.set_xlabel("Convergence / day$^{-1}$")
