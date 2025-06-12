@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 from src.read_data import read_cloudsat, load_iwp_hists, load_cre, load_random_datasets
+import matplotlib as mpl
+mpl.use("WebAgg")  # Use WebAgg backend for interactive plotting
 
 # %% load data
 runs = ["jed0011", "jed0033", "jed0022"]
@@ -125,5 +127,6 @@ for ax, letter in zip([ax00, ax10, ax20, ax01, ax11], ["a", "b", "c", "d", "e"])
 
 fig.tight_layout()
 fig.savefig('plots/publication/figure1.pdf', bbox_inches='tight')
+plt.show()
 
 # %%

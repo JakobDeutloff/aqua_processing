@@ -85,6 +85,7 @@ for run in runs:
         edges,
         label=exp_name[run],
         color=colors[run],
+        alpha=0.5
     )
     axes[0, 0].plot(
         x, sin_func(x, *parameters_iwp[run]), color=colors[run], linestyle="--"
@@ -95,6 +96,7 @@ for run in runs:
         edges,
         label=exp_name[run],
         color=colors[run],
+        alpha=0.5
     )
     axes[1, 0].plot(
         x, sin_func(x, *parameters_wa[run]), color=colors[run], linestyle="--"
@@ -133,9 +135,9 @@ axes[1, 1].remove()
 
 # add legend 
 handles = [
-    plt.Line2D([0], [0], color="midnightblue", linestyle="-"),
-    plt.Line2D([0], [0], color="darkviolet", linestyle="-"),
-    plt.Line2D([0], [0], color="deeppink", linestyle="-"),
+    plt.Line2D([0], [0], color=colors["jed0011"], linestyle="-"),
+    plt.Line2D([0], [0], color=colors['jed0033'], linestyle="-"),
+    plt.Line2D([0], [0], color=colors['jed0022'], linestyle="-"),
     plt.Line2D([0], [0], color="grey", marker="o", linestyle=""),
     plt.Line2D([0], [0], color="grey", marker="x", linestyle=""),
 ]

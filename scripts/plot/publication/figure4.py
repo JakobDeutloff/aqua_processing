@@ -15,7 +15,7 @@ from scipy.stats import linregress
 # %%
 runs = ["jed0011", "jed0033", "jed0022"]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
-colors = colors = {"jed0011": "#3e0237", "jed0022": "#f707da", "jed0033": "#9a0488"}
+colors = {"jed0011": "#3e0237", "jed0022": "#f707da", "jed0033": "#9a0488"}
 labels = {
     "jed0011": "Control",
     "jed0022": "+4 K",

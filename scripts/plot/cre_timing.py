@@ -1,7 +1,5 @@
 # %%
-import xarray as xr
 import matplotlib.pyplot as plt
-from src.calc_variables import calc_cre
 import numpy as np
 from scipy.optimize import curve_fit
 from src.read_data import load_random_datasets, load_cape_cin, load_vgrid

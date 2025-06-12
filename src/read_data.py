@@ -107,7 +107,7 @@ def load_random_datasets(processed=True):
     if processed:
         for run in runs:
             datasets[run] = xr.open_dataset(
-                f"/work/bm1183/m301049/icon_hcap_data/{experiments[run]}/production/random_sample/{run}_randsample_processed.nc"
+                f"/work/bm1183/m301049/icon_hcap_data/{experiments[run]}/production/random_sample/{run}_randsample_processed_64.nc"
             )
     else:
         for run in runs:
@@ -286,3 +286,22 @@ def load_cape_cin():
         )
 
     return cape_cin_data
+
+def load_definitions():
+    """
+    Load the definitions for the runs, experiment names, colors, and labels.
+    Returns
+    -------
+    tuple
+        A tuple containing the runs, experiment names, colors, and labels.
+    """
+
+    runs = ["jed0011", "jed0033", "jed0022"]
+    exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
+    colors = {"jed0011": "#3e0237", "jed0022": "#f707da", "jed0033": "#9a0488"}
+    labels = {
+    "jed0011": "Control",
+    "jed0022": "+4 K",
+    "jed0033": "+2 K",
+    }   
+    return runs, exp_name, colors, labels
