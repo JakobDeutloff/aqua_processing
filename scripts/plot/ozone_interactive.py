@@ -1,3 +1,4 @@
+# %%
 import xarray as xr
 from src.grid_helpers import merge_grid, fix_time
 import matplotlib.pyplot as plt
@@ -128,3 +129,5 @@ fig.legend(
 )
 fig.tight_layout()
 fig.savefig("plots/ozone/profiles_ozone_cf.png", dpi=300, bbox_inches="tight")
+
+# %%

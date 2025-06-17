@@ -2,7 +2,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from src.read_data import load_iwp_hists, load_cre, load_random_datasets
-
+import matplotlib as mpl
+mpl.use("Webagg")
 # %% load data
 runs = ["jed0011", "jed0022", "jed0033"]
 colors_fluxes = {
@@ -250,4 +251,5 @@ for i, ax in enumerate(a):
 
 
 fig.savefig('plots/publication/figure6.pdf', bbox_inches='tight')
+plt.show()
 # %%

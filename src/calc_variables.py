@@ -420,3 +420,40 @@ def calc_conv(wsub, zg, z_var="temp"):
         "long_name": "Convergence",
     }
     return conv
+
+
+def calc_dry_air_properties(ds):
+    """
+    Calculate the properties of dry air based on the given dataset.
+
+    Parameters:
+    ds (xarray.Dataset): The dataset containing the necessary variables.
+
+    Returns:
+    xarray.Dataset: The dataset with additional variables for dry air properties.
+    """
+
+    # Dry Air density
+    rho_air = ds.pfull / ds.ta / 287.04
+    rho_air.attrs = {"units": "kg/m^3", "long_name": "dry air density"}
+    # Dry air specific mass
+    dry_air = 1 - (ds.cli + ds.clw + ds.qs + ds.qg + ds.qr + ds.hus)
+    dry_air.attrs = {"units": "kg/kg", "long_name": "specific mass of dry air"}
+
+    return rho_air, dry_air
+
+
+def convert_to_density(ds, key):
+    """
+    Convert the given variable to density based on the dry air specific mass.
+
+    Parameters:
+    ds (xarray.Dataset): The dataset containing the variables.
+    var (str): The variable to be converted.
+
+    Returns:
+    xarray.Dataset: The dataset with the converted variable.
+    """
+    var = (ds[key] / ds["dry_air"]) * ds["rho_air"]
+    var.attrs["units"] = "kg/m^3"
+    return var

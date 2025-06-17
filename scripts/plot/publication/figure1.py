@@ -128,5 +128,4 @@ for ax, letter in zip([ax00, ax10, ax20, ax01, ax11], ["a", "b", "c", "d", "e"])
 fig.tight_layout()
 fig.savefig('plots/publication/figure1.pdf', bbox_inches='tight')
 plt.show()
-
 # %%
