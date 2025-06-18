@@ -34,7 +34,7 @@ if [ ! -f "$WEIGHTS_FILE" ]; then
 fi
 
 # Regrid entire file in one pass
-OUTFILE="$OUTDIR/${BASENAME}_fine.nc"
+OUTFILE="$OUTDIR/${BASENAME}_coarse.nc"
 cdo -P $OMP_NUM_THREADS remap,"$TARGET_GRID","$WEIGHTS_FILE" "$FILE_PATH" "$OUTFILE"
 
 echo "✅ Done with $FILE → $OUTFILE"
