@@ -322,6 +322,7 @@ feedback_area = {}
 feedback_opacity = {}
 for run in runs[1:]:
     g_cap = ((histograms[run] - histograms['jed0011']).sum() / histograms['jed0011'].sum())
+    print(f"g_cap for {run}: {g_cap*100/temp_deltas[run]} %/K")
     g_prime = ((histograms[run] - histograms['jed0011']) / histograms['jed0011']) - g_cap
     feedback_area[run] = cre_integrated['jed0011'] * g_cap / temp_deltas[run]
     feedback_opacity[run] = (g_prime * histograms['jed0011'] * cre['jed0011']).sum() / temp_deltas[run]

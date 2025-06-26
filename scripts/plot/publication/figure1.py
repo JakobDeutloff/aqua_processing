@@ -1,33 +1,35 @@
 # %%
 import matplotlib.pyplot as plt
 import numpy as np
+import xarray as xr
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
-from src.read_data import read_cloudsat, load_iwp_hists, load_cre, load_random_datasets
+from src.read_data import (
+    read_cloudsat,
+    load_iwp_hists,
+    load_cre,
+    load_random_datasets,
+    load_definitions,
+)
 import matplotlib as mpl
-mpl.use("WebAgg")  # Use WebAgg backend for interactive plotting
+
+# mpl.use("WebAgg")  # Use WebAgg backend for interactive plotting
 
 # %% load data
-runs = ["jed0011", "jed0033", "jed0022"]
-colors = {"jed0011": "#3e0237", "jed0022": "#f707da", "jed0033": "#9a0488"}
-linestyles = {
-    "jed0011": "-",
-    "jed0022": "--",
-    "jed0033": "-.",
-}
-line_labels = {
-    "jed0011": "Control",
-    "jed0022": "+4 K",
-    "jed0033": "+2 K",
-}
-mode = "raw"
-datasets = load_random_datasets(processed=True)
+runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
+    load_definitions()
+)
+datasets = load_random_datasets()
 histograms = load_iwp_hists()
 cre = load_cre()
-# %% read cloudsat
-cloudsat_raw = read_cloudsat("2009")
+# %% read cloudsat and dardar
+cloudsat_raw = read_cloudsat("2008")
+dardar_raw = xr.open_dataset("/work/bm1183/m301049/dardar/dardar_iwp_2008.nc")
+mask = (dardar_raw['latitude'] > -20) & (dardar_raw['latitude'] < 20) 
+dardar_raw = dardar_raw.where(mask)
 
 # %% average over pairs of three entries in cloudsat to get to a resolution of 4.8 km
 cloudsat = cloudsat_raw.to_xarray().coarsen({"scnline": 3}, boundary="trim").mean()
+dardar = dardar_raw.coarsen({"scanline": 3}, boundary="trim").mean()
 
 # %% calculate iwp hist
 iwp_bins = np.logspace(-4, np.log10(40), 51)
@@ -35,6 +37,10 @@ histograms["cloudsat"], edges = np.histogram(
     cloudsat["ice_water_path"] / 1e3, bins=iwp_bins, density=False
 )
 histograms["cloudsat"] = histograms["cloudsat"] / len(cloudsat["ice_water_path"])
+histograms["dardar"], _ = np.histogram(
+    dardar["iwp"] / 1e3, bins=iwp_bins, density=False
+)
+histograms["dardar"] = histograms["dardar"] / np.isfinite(dardar['iwp']).sum().values
 
 # %% plot
 fig = plt.figure(figsize=(12, 8))
@@ -56,31 +62,50 @@ ax00.axhline(0, color="k", linewidth=0.5)
 ax10.axhline(0, color="k", linewidth=0.5)
 ax20.axhline(0, color="k", linewidth=0.5)
 for run in runs:
-    ax00.plot(cre[run]["iwp"], cre[run]["lw"], color="r", linestyle=linestyles[run])
-    ax00.plot(cre[run]["iwp"], cre[run]["sw"], color="b", linestyle=linestyles[run])
-    ax00.plot(cre[run]["iwp"], cre[run]["net"], color="k", linestyle=linestyles[run])
+    ax00.plot(
+        cre[run]["iwp"], cre[run]["lw"], color=lw_color, linestyle=linestyles[run]
+    )
+    ax00.plot(
+        cre[run]["iwp"], cre[run]["sw"], color=sw_color, linestyle=linestyles[run]
+    )
+    ax00.plot(
+        cre[run]["iwp"], cre[run]["net"], color=net_color, linestyle=linestyles[run]
+    )
 ax00.set_yticks([-250, 0, 200])
 ax00.set_ylabel(r"$C(I)$ / W m$^{-2}$")
 
 for run in runs[1:]:
-    ax10.plot(cre[run]["iwp"], cre[run]["lw"] - cre[runs[0]]["lw"], color=colors[run], label=line_labels[run])
-    ax20.plot(cre[run]["iwp"], cre[run]["sw"] - cre[runs[0]]["sw"], color=colors[run], label=line_labels[run])
+    ax10.plot(
+        cre[run]["iwp"],
+        cre[run]["lw"] - cre[runs[0]]["lw"],
+        color=lw_color,
+        linestyle=linestyles[run],
+        label=line_labels[run],
+    )
+    ax20.plot(
+        cre[run]["iwp"],
+        cre[run]["sw"] - cre[runs[0]]["sw"],
+        color=sw_color,
+        linestyle=linestyles[run],
+        label=line_labels[run],
+    )
 ax10.set_ylim([-1, 28])
-ax10.set_ylabel(r"$\Delta C_{\mathrm{LW}}(I)$ / W m$^{-2}$", color="r")
+ax10.set_ylabel(r"$\Delta C_{\mathrm{LW}}(I)$ / W m$^{-2}$")
 ax10.set_yticks([0, 5, 20])
 ax20.set_ylim([-1, 28])
-ax20.set_ylabel(r"$\Delta C_{\mathrm{SW}}(I)$ / W m$^{-2}$", color="b")
+ax20.set_ylabel(r"$\Delta C_{\mathrm{SW}}(I)$ / W m$^{-2}$")
 ax20.set_yticks([0, 5, 20])
 
 # IWP histograms
-ax01.stairs(histograms["cloudsat"], edges, color="k", linewidth=4, alpha=0.5, label="2C-ICE")
+ax01.stairs(
+    histograms["cloudsat"], edges, color="k", linewidth=3, alpha=0.5, label="2C-ICE"
+)
+ax01.stairs(
+    histograms['dardar'], edges, color='brown', linewidth=3, alpha=0.5, label='DarDar v2'
+)
 for run in runs:
     ax01.stairs(
-        histograms[run],
-        edges,
-        color=colors[run],
-        label=line_labels[run],
-        linewidth=1.5
+        histograms[run], edges, color=colors[run], label=line_labels[run], linewidth=1.5
     )
 ax01.set_yticks([0, 0.01, 0.02])
 ax01.set_ylabel("$P(I)$")
@@ -107,25 +132,34 @@ for ax in [ax00, ax10, ax01]:
 for ax in [ax20, ax11]:
     ax.set_xlabel("$I$ / kg m$^{-2}$")
 
-# legends 
+# legends
 for ax in [ax10, ax20]:
     ax.legend(frameon=False, loc="upper left", fontsize=10)
 for ax in [ax01, ax11]:
     ax.legend(frameon=False, loc="upper right", fontsize=10)
-handles = [plt.Line2D([0], [0], color='r'), 
-           plt.Line2D([0], [0], color='b'), 
-           plt.Line2D([0], [0], color='k'),
-           plt.Line2D([0], [0], color='grey'),
-           plt.Line2D([0], [0], color='grey', linestyle='--'),
-           plt.Line2D([0], [0], color='grey', linestyle='-.')]
-labels = ['LW', 'SW', 'Net', '2C-ICE', 'Control', '+4 K', '+2 K'] 
-ax00.legend(handles=handles, labels=labels, loc='lower left', frameon=False, fontsize=10, ncols=2)    
+handles = [
+    plt.Line2D([0], [0], color=lw_color),
+    plt.Line2D([0], [0], color=sw_color),
+    plt.Line2D([0], [0], color=net_color),
+    plt.Line2D([0], [0], color="grey"),
+    plt.Line2D([0], [0], color="grey", linestyle="--"),
+    plt.Line2D([0], [0], color="grey", linestyle="-."),
+]
+labels = ["LW", "SW", "Net", "+4 K", "+2 K", "Control"]
+ax00.legend(
+    handles=handles,
+    labels=labels,
+    loc="lower left",
+    frameon=False,
+    fontsize=10,
+    ncols=2,
+)
 
-# add letters 
+# add letters
 for ax, letter in zip([ax00, ax10, ax20, ax01, ax11], ["a", "b", "c", "d", "e"]):
-    ax.text(0.03, 1, letter, transform=ax.transAxes, fontsize=14, fontweight='bold')
+    ax.text(0.03, 1, letter, transform=ax.transAxes, fontsize=14, fontweight="bold")
 
 fig.tight_layout()
-fig.savefig('plots/publication/figure1.pdf', bbox_inches='tight')
+fig.savefig("plots/publication/figure1.pdf", bbox_inches="tight")
 plt.show()
 # %%

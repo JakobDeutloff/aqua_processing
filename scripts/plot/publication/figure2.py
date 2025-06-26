@@ -1,23 +1,13 @@
 # %%
 import matplotlib.pyplot as plt
-from src.read_data import load_random_datasets, load_vgrid
+from src.read_data import load_random_datasets, load_vgrid, load_definitions
 from src.calc_variables import calculate_hc_temperature_bright
 import numpy as np
 
 # %% load data
-runs = ["jed0011", "jed0033", "jed0022"]
-colors = {"jed0011": "#3e0237", "jed0022": "#f707da", "jed0033": "#9a0488"}
-linestyles = {
-    "jed0011": "-",
-    "jed0022": "--",
-    "jed0033": "-.",
-}
-line_labels = {
-    "jed0011": "Control",
-    "jed0022": "+4 K",
-    "jed0033": "+2 K",
-}
-mode = "raw"
+runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
+    load_definitions()
+)
 datasets = load_random_datasets(processed=True)
 vgrid = load_vgrid()
 
@@ -104,3 +94,4 @@ means = {}
 for run in runs:
     means[run] = datasets[run]["hc_top_temp_bright"].where(datasets[run]["iwp"] > 1e-4).mean().values
     print(f"mean hc temp {line_labels[run]} {means[run]:.2f} K")
+# %%

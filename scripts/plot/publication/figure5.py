@@ -5,19 +5,16 @@ import numpy as np
 from src.calc_variables import (
     calc_heating_rates_t,
 )
+from src.read_data import load_random_datasets, load_definitions
 # %%
-runs = ["jed0011", "jed0033", "jed0022"]
-exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
-colors = {"jed0011": "#3e0237", "jed0022": "#f707da", "jed0033": "#9a0488"}
-datasets = {}
+runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
+    load_definitions()
+)
+datasets = load_random_datasets(version="temp")
+datasets_processed = load_random_datasets(version="processed")
 for run in runs:
-    datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_tgrid_20.nc"
-    )
-    ds = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
-    ).sel(index=slice(0, 1e6))
     # Assign all variables from ds to datasets if dim == index
+    ds = datasets_processed[run].sel(index=slice(0, 1e6))
     datasets[run] = datasets[run].assign(
         **{var: ds[var] for var in ds.variables if ("index",) == ds[var].dims}
     )
@@ -63,12 +60,12 @@ for run in runs:
 
 # %% plot
 fig, axes  = plt.subplots(1, 3, figsize=(12, 4), sharex=True, sharey=True)
-
+cmap = "seismic"
 net = axes[0].pcolormesh(
     iwp_points,
     hrs_binned_net['jed0011']['temp'],
     hrs_binned_net['jed0011'].T,
-    cmap="seismic",
+    cmap=cmap,
     vmin=-4,
     vmax=4,
     rasterized=True
@@ -78,7 +75,7 @@ diff = axes[1].pcolormesh(
     iwp_points,
     hrs_binned_net['jed0033']['temp'],
     (hrs_binned_net['jed0033'] - hrs_binned_net['jed0011']).T,
-    cmap="seismic",
+    cmap=cmap,
     vmin=-1.5,
     vmax=1.5,
     rasterized=True
@@ -88,7 +85,7 @@ axes[2].pcolormesh(
     iwp_points,
     hrs_binned_net['jed0022']['temp'],
     (hrs_binned_net['jed0022'] - hrs_binned_net['jed0011']).T,
-    cmap="seismic",
+    cmap=cmap,
     vmin=-1.5,
     vmax=1.5,
     rasterized=True

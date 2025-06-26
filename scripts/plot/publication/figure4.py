@@ -10,27 +10,18 @@ from src.calc_variables import (
 )
 from scipy.signal import savgol_filter
 from scipy.stats import linregress
+from src.read_data import load_random_datasets, load_definitions
 
 
 # %%
-runs = ["jed0011", "jed0033", "jed0022"]
-exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
-colors = {"jed0011": "#3e0237", "jed0022": "#f707da", "jed0033": "#9a0488"}
-labels = {
-    "jed0011": "Control",
-    "jed0022": "+4 K",
-    "jed0033": "+2 K",
-}
-datasets = {}
-datasets
+runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
+    load_definitions()
+)
+datasets = load_random_datasets(version="temp")
+datasets_processed = load_random_datasets(version="processed")
 for run in runs:
-    datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_tgrid_20.nc"
-    ).sel(temp=slice(200, None))
-    ds = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample.nc"
-    ).sel(index=slice(0, 1e6))
     # Assign all variables from ds to datasets if dim == index
+    ds = datasets_processed[run].sel(index=slice(0, 1e6))
     datasets[run] = datasets[run].assign(
         **{var: ds[var] for var in ds.variables if ("index",) == ds[var].dims}
     )
@@ -95,28 +86,28 @@ for run in runs:
     axes[0].plot(
         hrs[run]["net_hr"].where(masks_clearsky[run]).mean("index"),
         hrs[run]["temp"],
-        label=labels[run],
+        label=line_labels[run],
         color=colors[run],
     )
     axes[0].set_xlabel("Heating Rate / K day$^{-1}$")
     axes[1].plot(
         stab[run].where(masks_clearsky[run]).mean("index"),
         stab[run]["temp"],
-        label=labels[run],
+        label=line_labels[run],
         color=colors[run],
     )
     axes[1].set_xlabel("Stability / K m$^{-1}$")
     axes[2].plot(
         subs[run],
         subs[run]["temp"],
-        label=labels[run],
+        label=line_labels[run],
         color=colors[run],
     )
     axes[2].set_xlabel("Subsidence / m day$^{-1}$")
     axes[3].plot(
         conv[run],
         conv[run]["temp"],
-        label=labels[run],
+        label=line_labels[run],
         color=colors[run],
     )
     axes[3].set_xlabel("Convergence /  day$^{-1}$")
@@ -125,7 +116,7 @@ if plot_const_hr:
         axes[2].plot(
             subs_cont[run],
             subs_cont[run]["temp"],
-            label=labels[run],
+            label=line_labels[run],
             color=colors[run],
             linestyle="--",
         )
@@ -134,7 +125,7 @@ if plot_const_hr:
             conv_cont[run]["temp"],
             color=colors[run],
             linestyle="--",
-            label="+4 K Constant HR"
+            label="+4 K Constant HR",
         )
 
 axes[0].set_ylim([260, 200])
@@ -155,7 +146,7 @@ fig.legend(
 for i, ax in enumerate(axes):
     ax.text(
         0.03,
-        1, 
+        1,
         chr(97 + i),
         transform=ax.transAxes,
         fontsize=14,
@@ -167,7 +158,11 @@ fig.savefig("plots/publication/figure4.pdf", bbox_inches="tight")
 
 # %% make scatterplot of max convergence and Ts
 max_conv = {}
-t_delta = {"jed0011": 0, "jed0033": 2, "jed0022": 4,}
+t_delta = {
+    "jed0011": 0,
+    "jed0033": 2,
+    "jed0022": 4,
+}
 for run in runs:
     max_conv[run] = float(conv[run].max(dim="temp").values)
 
@@ -234,8 +229,6 @@ yticks.append(0)
 yticks = np.round(yticks, 3)
 ax.set_yticks(yticks)
 ax.spines[["top", "right", "bottom"]].set_visible(False)
-ax.set_ylabel(r"$\Delta D_{\mathrm{max}} /\Delta T_s$ / day$^{-1}$ K$^{-1}$") 
+ax.set_ylabel(r"$\Delta D_{\mathrm{max}} /\Delta T_s$ / day$^{-1}$ K$^{-1}$")
 
-# %% plot real clear sky convergence 
-
-
+# %% plot real clear sky convergence

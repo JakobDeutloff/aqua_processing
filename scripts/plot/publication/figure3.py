@@ -3,26 +3,20 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import curve_fit
-from src.read_data import load_random_datasets, load_vgrid
+from src.read_data import load_random_datasets, load_vgrid, load_definitions
 
 # %% load CRE data
-runs = ["jed0011", "jed0033", "jed0022"]
-exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
-colors = colors = {"jed0011": "#3e0237", "jed0022": "#f707da", "jed0033": "#9a0488"}
+runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
+    load_definitions()
+)
+iwp_bins = np.logspace(-4, np.log10(40), 51)
+datasets = load_random_datasets()
+vgrid = load_vgrid()
 T_delta = {
     "jed0011": 0,
     "jed0022": 4,
     "jed0033": 2,
 }
-line_labels = {
-    "jed0011": "Control",
-    "jed0022": "+4 K",
-    "jed0033": "+2 K",
-}
-iwp_bins = np.logspace(-4, np.log10(40), 51)
-datasets = load_random_datasets()
-vgrid = load_vgrid()
-
 
 # %% fit sin to daily cycle
 def sin_func(x, a, b, c):
@@ -80,9 +74,9 @@ fig, axes = plt.subplots(2, 2, figsize=(12, 6), width_ratios=[1, 0.5])
 
 
 for run in runs:
-    axes[0, 0].stairs(
+    axes[0, 0].plot(
+        x,
         histograms_iwp[run],
-        edges,
         label=exp_name[run],
         color=colors[run],
         alpha=0.5
@@ -162,5 +156,24 @@ for ax, letter in zip([axes[0, 0], axes[1, 0], axes[0, 1]], ["a", "b", "c"]):
     )
 
 fig.savefig("plots/publication/figure3.pdf", bbox_inches="tight")
+
+# %% try alternative plot with CDF
+fig, axes = plt.subplots(2, 2, figsize=(12, 6), width_ratios=[1, 0.5])
+
+for run in runs:
+    axes[0, 0].plot(
+        x,
+        np.cumsum(histograms_iwp[run]) / np.sum(histograms_iwp[run]),
+        label=exp_name[run],
+        color=colors[run],
+    )
+
+    axes[1, 0].plot(
+        x,
+        np.cumsum(histograms_wa[run]) / np.sum(histograms_wa[run]),
+        label=exp_name[run],
+        color=colors[run],
+    )
+
 
 # %%

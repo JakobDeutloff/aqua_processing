@@ -88,7 +88,7 @@ def load_iwp_hists():
     return iwp_hists
 
 
-def load_random_datasets(processed=True):
+def load_random_datasets(version="processed"):
     """
     Load the random datasets for the model.
 
@@ -104,10 +104,15 @@ def load_random_datasets(processed=True):
     """
 
     datasets = {}
-    if processed:
+    if version == "processed":
         for run in runs:
             datasets[run] = xr.open_dataset(
                 f"/work/bm1183/m301049/icon_hcap_data/{experiments[run]}/production/random_sample/{run}_randsample_processed_64.nc"
+            )
+    elif version == "temp":
+        for run in runs:
+            datasets[run] = xr.open_dataset(
+                f"/work/bm1183/m301049/icon_hcap_data/{experiments[run]}/production/random_sample/{run}_randsample_tgrid_20.nc"
             )
     else:
         for run in runs:
@@ -298,10 +303,18 @@ def load_definitions():
 
     runs = ["jed0011", "jed0033", "jed0022"]
     exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
-    colors = {"jed0011": "#3e0237", "jed0022": "#f707da", "jed0033": "#9a0488"}
+    colors = {"jed0011": "forestgreen", "jed0022": "#D13DEB", "jed0033": "#008B8B"}
+    linestyles = {
+        "jed0011": "-.",
+        "jed0022": "-",
+        "jed0033": "--",
+    }
+    sw_color = "#125fd3"
+    lw_color= "#bd154a"
+    net_color ="#000000"
     labels = {
     "jed0011": "Control",
     "jed0022": "+4 K",
     "jed0033": "+2 K",
     }   
-    return runs, exp_name, colors, labels
+    return runs, exp_name, colors, labels, sw_color, lw_color, net_color, linestyles

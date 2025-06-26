@@ -14,11 +14,6 @@ colors = {
     "jed0022": "r",
     "jed0033": "orange",
 }
-t_deltas = {
-    "jed0011": 0,
-    "jed0022": 4,
-    "jed0033": 2,
-}
 datasets = {}
 for run in runs:
     ds_first_month = (
@@ -69,4 +64,45 @@ for run in runs:
 with open('/work/bm1183/m301049/icon_hcap_data/iwp_dists.pkl', 'wb') as f:
     pkl.dump(hists, f)
 
+# %% calculate local time 
+for run in runs: 
+    datasets[run] = datasets[run].where(datasets[run]["iwp"] > 1, drop=True)
+    datasets[run] = datasets[run].assign(
+        time_local=lambda d: d.time.dt.hour + (d.clon / 15)
+    )
+    datasets[run]["time_local"] = (
+        datasets[run]["time_local"]
+        .where(datasets[run]["time_local"] < 24, datasets[run]["time_local"] - 24)
+        .where(datasets[run]["time_local"] > 0, datasets[run]["time_local"] + 24)
+    )
+    datasets[run]["time_local"].attrs = {"units": "h", "long_name": "Local time"}
+# %% calculate P(I>1)
+bins = np.arange(0, 24.01, 0.01)
+hists_deep = {}
+for run in runs:
+    hist, edges = np.histogram(
+        datasets[run]["time_local"].where(datasets[run]["iwp"] > 1e0),
+        bins=bins,
+        density=True,
+    )
+    hists_deep[run] = hist
+
+# %% quick plot
+
+# calculate rolling mean 
+for run in runs:
+    hists_deep[run] = (
+        xr.DataArray(hists_deep[run], dims=["time_local"])
+        .rolling(time_local=48, center=True)
+        .mean()
+    )
+
+fig, ax = plt.subplots(figsize=(8, 6))
+for run in runs:
+    ax.plot(
+        bins[:-1],
+        hists_deep[run],
+        color=colors[run],
+        label=f"{run}",
+    )
 # %%
