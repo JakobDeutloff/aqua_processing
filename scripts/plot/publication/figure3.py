@@ -36,7 +36,7 @@ for run in runs:
     histograms_iwp[run], edges = np.histogram(
         datasets[run]["time_local"].where(datasets[run]["iwp"] > 1e0),
         bins,
-        density=True,
+        density=False,
     )
     options = {"ftol": 1e-15}
     popt, pcov = curve_fit(
@@ -57,7 +57,7 @@ for run in runs:
     histograms_wa[run], edges = np.histogram(
         datasets[run]["time_local"].where(mask),
         bins,
-        density=True,
+        density=False,
     )
     popt, pcov = curve_fit(
         sin_func,
@@ -69,14 +69,19 @@ for run in runs:
     )
     parameters_wa[run] = popt
 
+# %% get normalised incoming SW for every bin 
+SW_in = datasets['jed0011']['rsdt'].groupby_bins(
+    datasets['jed0011']['time_local'], bins=bins).mean()
+SW_in = SW_in / SW_in.max()
+
 # %% plot
 fig, axes = plt.subplots(2, 2, figsize=(12, 6), width_ratios=[1, 0.5])
 
 
 for run in runs:
-    axes[0, 0].plot(
-        x,
+    axes[0, 0].stairs(
         histograms_iwp[run],
+        edges,
         label=exp_name[run],
         color=colors[run],
         alpha=0.5
@@ -157,23 +162,135 @@ for ax, letter in zip([axes[0, 0], axes[1, 0], axes[0, 1]], ["a", "b", "c"]):
 
 fig.savefig("plots/publication/figure3.pdf", bbox_inches="tight")
 
-# %% try alternative plot with CDF
+# %% try alternative plot 
 fig, axes = plt.subplots(2, 2, figsize=(12, 6), width_ratios=[1, 0.5])
+
 
 for run in runs:
     axes[0, 0].plot(
         x,
-        np.cumsum(histograms_iwp[run]) / np.sum(histograms_iwp[run]),
+        histograms_iwp[run]*SW_in,
         label=exp_name[run],
         color=colors[run],
+        linewidth=2,
     )
 
     axes[1, 0].plot(
-        x,
-        np.cumsum(histograms_wa[run]) / np.sum(histograms_wa[run]),
+        x, 
+        histograms_wa[run]*SW_in,
         label=exp_name[run],
         color=colors[run],
+        linewidth=2,
     )
 
+for ax in axes[:, 0]:
+    ax.set_xlim([5.9, 18.1])
+    ax.set_ylim([0, 0.05])
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.set_xticks([6, 12, 18])
+    ax.set_yticks([0, 0.03, 0.05])
+axes[1, 0].set_xlabel("Local Time / h")
+axes[0, 0].set_ylabel("P($I$ > 1 kg m$^{-2}$) $\cdot ~ S$")
+axes[1, 0].set_ylabel(r"P($\omega$ > 1 m s$^{-1}$) $\cdot ~ S$")
 
+for run in runs:
+    axes[0, 1].scatter(
+        T_delta[run],
+        (histograms_iwp[run] * SW_in).sum(),
+        color=colors[run],
+        marker='o',
+    )
+    axes[0, 1].scatter(
+        T_delta[run],
+        (histograms_wa[run] * SW_in).sum(),
+        color=colors[run],
+        marker='x',
+    )
+axes[0, 1].set_xticks([0, 2, 4])
+axes[0, 1].set_xticklabels(["Control", "+2 K", "+4 K"])
+axes[0, 1].set_ylabel("Daily Maximum / h")
+axes[0, 1].spines[["top", "right"]].set_visible(False)
+
+axes[1, 1].remove()
+
+# add legend 
+handles = [
+    plt.Line2D([0], [0], color=colors["jed0011"], linestyle="-"),
+    plt.Line2D([0], [0], color=colors['jed0033'], linestyle="-"),
+    plt.Line2D([0], [0], color=colors['jed0022'], linestyle="-"),
+    plt.Line2D([0], [0], color="grey", marker="o", linestyle=""),
+    plt.Line2D([0], [0], color="grey", marker="x", linestyle=""),
+]
+labels = ["Control", "+2 K", "+4 K", "$I > 1$ kg m$^{-2}$", r"$\omega > 1$ m s$^{-1}$"]
+fig.legend(
+    handles,
+    labels,
+    bbox_to_anchor=(0.88, 0.4),
+    ncols=2,
+    frameon=False,
+)
+
+# add letters 
+for ax, letter in zip([axes[0, 0], axes[1, 0], axes[0, 1]], ["a", "b", "c"]):
+    ax.text(
+        0.03,
+        1,
+        letter,
+        transform=ax.transAxes,
+        fontsize=14,
+        fontweight="bold",
+    )
+
+fig.savefig("plots/publication/figure3_alt.pdf", bbox_inches="tight")
+# %% calculate day night occurence 
+day_occurrence_iwp = {}
+day_occurence_vel = {}
+for run in runs:
+    day_occurrence_iwp[run] = datasets[run]["time_local"].where(
+        (datasets[run]["time_local"] >= 6) & (datasets[run]["time_local"] < 18) & (datasets[run]["iwp"] > 1e0)
+    ).count() / datasets[run]["time_local"].where(datasets[run]['iwp'] > 1e0).count()
+
+    vels = (
+        datasets[run]["wa"].isel(height_2=slice(height_2, height_1)).max(dim="height_2")
+    )
+    mask = vels > 1
+    day_occurence_vel[run] = datasets[run]["time_local"].where(
+        (datasets[run]["time_local"] >= 6) & (datasets[run]["time_local"] < 18) & (mask)
+    ).count() / datasets[run]["time_local"].where(mask).count()
+
+
+
+# %% plot day night occurence
+fig, ax = plt.subplots(figsize=(4, 4))
+for run in runs:
+    ax.scatter(
+        T_delta[run],
+        day_occurrence_iwp[run]*100,
+        color=colors[run],
+        marker='o',
+        label=f"{exp_name[run]} IWP"
+    )
+    ax.scatter(
+        T_delta[run],
+        day_occurence_vel[run]*100,
+        color=colors[run],
+        marker='x',
+        label=f"{exp_name[run]} WA"
+    )
+ax.set_xticks([0, 2, 4])
+ax.set_xticklabels(["Control", "+2 K", "+4 K"])
+ax.set_ylabel("P(Occurrence during Day) / %")
+handles = [
+    plt.Line2D([0], [0], color='grey', marker='o', linestyle=''),
+    plt.Line2D([0], [0], color='grey', marker='x', linestyle=''),
+]
+labels = ["$I > 1$ kg m$^{-2}$", r"$\omega > 1$ m s$^{-1}$"]
+fig.legend(
+    handles,
+    labels,
+    bbox_to_anchor=(0.88, -0.05),
+    ncols=2,
+    frameon=False,
+)
+ax.spines[["top", "right"]].set_visible(False)
 # %%

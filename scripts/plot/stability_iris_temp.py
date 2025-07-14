@@ -16,16 +16,10 @@ from src.calc_variables import (
 )
 from scipy.signal import savgol_filter
 from scipy.stats import linregress
+from src.read_data import load_definitions
 
 # %%
-runs = ["jed0011", "jed0022", "jed0033"]
-exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
-colors = {"jed0011": "k", "jed0022": "r", "jed0033": "orange"}
-labels = {
-    "jed0011": "Control",
-    "jed0022": "+4 K",
-    "jed0033": "+2 K",
-}
+runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = load_definitions()
 datasets = {}
 datasets
 for run in runs:
@@ -222,33 +216,33 @@ for run in ["jed0022", "jed0033"]:
 
 # %% plot results in /m
 fig, axes = plt.subplots(1, 4, figsize=(14, 6), sharey=True)
-plot_const_hr = False
+plot_const_hr = True
 for run in runs:
     axes[0].plot(
         hrs[run]["net_hr"].where(masks_clearsky[run]).mean("index"),
         hrs[run]["temp"],
-        label=labels[run],
+        label=line_labels[run],
         color=colors[run],
     )
     axes[0].set_xlabel("Heating rate / K day$^{-1}$")
     axes[1].plot(
         stab[run].where(masks_clearsky[run]).mean("index"),
         stab[run]["temp"],
-        label=labels[run],
+        label=line_labels[run],
         color=colors[run],
     )
     axes[1].set_xlabel("Stability / K m$^{-1}$")
     axes[2].plot(
         subs[run],
         subs[run]["temp"],
-        label=labels[run],
+        label=line_labels[run],
         color=colors[run],
     )
     axes[2].set_xlabel("Subsidence / m day$^{-1}$")
     axes[3].plot(
         conv[run],
         conv[run]["temp"],
-        label=labels[run],
+        label=line_labels[run],
         color=colors[run],
     )
     axes[3].set_xlabel("Convergence /  day$^{-1}$")
@@ -257,14 +251,14 @@ if plot_const_hr:
         axes[2].plot(
             subs_cont[run],
             subs_cont[run]["temp"],
-            label=labels[run],
+            label=line_labels[run],
             color=colors[run],
             linestyle="--",
         )
         axes[3].plot(
             conv_cont[run],
             conv_cont[run]["temp"],
-            label=labels[run],
+            label=line_labels[run],
             color=colors[run],
             linestyle="--",
         )
@@ -286,8 +280,8 @@ fig.savefig("plots/iwp_drivers/stab_iris_temp.png", dpi=300, bbox_inches="tight"
 
 # %% make scatterplot of max convergence and Ts
 max_conv = {}
-t_delta = {"jed0011": 0, "jed0022": 4, "jed0033": 2}
-for run in runs:
+t_delta = {"jed0011": 0, "jed0033": 2, "jed0022": 4,}
+for run in ['jed0011', 'jed0033', 'jed0022']:
     max_conv[run] = float(conv[run].max(dim="temp").values)
 
 linreg = linregress(
@@ -385,19 +379,19 @@ for run in runs:
     axes[0].plot(
         mean_hr[run],
         mean_hr[run]["temp"],
-        label=labels[run],
+        label=line_labels[run],
         color=colors[run],
     )
     axes[2].plot(
         mean_rho[run],
         mean_rho[run]["temp"],
-        label=labels[run],
+        label=line_labels[run],
         color=colors[run],
     )
     axes[1].plot(
         f_conv[run].where(masks_clearsky[run]).mean("index"),
         f_conv[run]["temp"],
-        label=labels[run],
+        label=line_labels[run],
         color=colors[run],
     )
 

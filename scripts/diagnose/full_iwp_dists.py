@@ -77,7 +77,7 @@ for run in runs:
     )
     datasets[run]["time_local"].attrs = {"units": "h", "long_name": "Local time"}
 # %% calculate P(I>1)
-bins = np.arange(0, 24.01, 0.01)
+bins = np.arange(0, 25, 1)
 hists_deep = {}
 for run in runs:
     hist, edges = np.histogram(
@@ -89,19 +89,11 @@ for run in runs:
 
 # %% quick plot
 
-# calculate rolling mean 
-for run in runs:
-    hists_deep[run] = (
-        xr.DataArray(hists_deep[run], dims=["time_local"])
-        .rolling(time_local=48, center=True)
-        .mean()
-    )
-
 fig, ax = plt.subplots(figsize=(8, 6))
 for run in runs:
-    ax.plot(
-        bins[:-1],
+    ax.stairs(
         hists_deep[run],
+        edges,
         color=colors[run],
         label=f"{run}",
     )

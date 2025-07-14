@@ -303,7 +303,7 @@ def load_definitions():
 
     runs = ["jed0011", "jed0033", "jed0022"]
     exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
-    colors = {"jed0011": "forestgreen", "jed0022": "#D13DEB", "jed0033": "#008B8B"}
+    colors = {"jed0011": "#462d7b", "jed0022": "#c1df24", "jed0033": "#1f948a"}
     linestyles = {
         "jed0011": "-.",
         "jed0022": "-",

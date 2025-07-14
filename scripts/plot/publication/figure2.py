@@ -8,7 +8,7 @@ import numpy as np
 runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
     load_definitions()
 )
-datasets = load_random_datasets(processed=True)
+datasets = load_random_datasets()
 vgrid = load_vgrid()
 
 # %% calculate hc temp with brightness temperature
