@@ -3,17 +3,17 @@ import xarray as xr
 from src.calc_variables import (
     calc_connected,
     calc_IWC_cumsum,
-    calculate_hc_temperature,
+    calculate_hc_temperature_bright,
 )
 import os
 
 # %% load data
-runs = ["jed0011", "jed0022", "jed0033"]
-exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
+runs = ["jed2224"]
+exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K", "jed2224": "const_o3"}
 datasets = {}
 for run in runs:
     datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample.nc",
     )
 
 vgrid = (
@@ -41,11 +41,13 @@ for run in runs:
 
 # %% calculate connectedness
 for run in runs:
-    datasets[run] = datasets[run].assign(conn=calc_connected(datasets[run], vgrid["zg"]))
+    datasets[run] = datasets[run].assign(
+        conn=calc_connected(datasets[run], vgrid["zg"])
+    )
 # %% calculate cloud top
 for run in runs:
     datasets[run]["hc_top_temperature"], datasets[run]["hc_top_pressure"] = (
-        calculate_hc_temperature(datasets[run], IWP_emission=0.06)
+        calculate_hc_temperature_bright(datasets[run], vgrid["zg"])
     )
 # %% calculate masks
 for run in runs:
@@ -69,11 +71,12 @@ for run in runs:
     )
     datasets[run]["time_local"].attrs = {"units": "h", "long_name": "Local time"}
 
-# %% save processed data
+# %% save processed data as float64
 for run in runs:
-    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
+    print(f"Saving processed data for {run}...")
+    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_64.nc"
     if os.path.exists(path):
         os.remove(path)
-    datasets[run].to_netcdf(path)
+    datasets[run].chunk(chunks={}).astype(float).to_netcdf(path)
 
 # %%

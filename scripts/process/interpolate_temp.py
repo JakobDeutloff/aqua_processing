@@ -9,7 +9,7 @@ from src.calc_variables import calc_stability_t, calc_pot_temp, calc_heating_rat
 
 # %% load data
 run = sys.argv[1]
-exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
+exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K", "jed2224": "const_o3"}
 
 ds = xr.open_dataset(
     f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample.nc"

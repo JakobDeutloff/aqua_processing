@@ -115,13 +115,16 @@ def get_random_coords(run, followup, model_config, exp_name, number=0):
         .pipe(merge_grid)
         .pipe(fix_time)
     )
-    path = f"/work/bm1183/m301049/{model_config}/experiments/{followup}/"
-    ds_second = (
-        xr.open_mfdataset(f"{path}{followup}_atm_3d_main_19*.nc", chunks={})
-        .pipe(merge_grid)
-        .pipe(fix_time)
-    )
-    ds = xr.concat([ds_first, ds_second], dim="time")
+    if followup is None:
+        ds = ds_first
+    else:
+        path = f"/work/bm1183/m301049/{model_config}/experiments/{followup}/"
+        ds_second = (
+            xr.open_mfdataset(f"{path}{followup}_atm_3d_main_19*.nc", chunks={})
+            .pipe(merge_grid)
+            .pipe(fix_time)
+        )
+        ds = xr.concat([ds_first, ds_second], dim="time")
 
     # select tropics
     ds_trop = ds.where((ds.clat < 20) & (ds.clat > -20), drop=True)

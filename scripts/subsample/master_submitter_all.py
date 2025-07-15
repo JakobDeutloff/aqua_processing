@@ -4,8 +4,9 @@ from src.sampling import get_random_coords
 
 # %%
 runs = [
-    "jed0011",
-#   "jed0022",
+    "jed2224"
+#    "jed0011",
+#    "jed0022",
 #    "jed0033",
 ]
 
@@ -13,6 +14,7 @@ followups = {
     'jed0011': 'jed0111',
     'jed0022': 'jed0222',
     'jed0033': 'jed0333',
+    'jed2224': None,
 }
 
 files = [
@@ -27,12 +29,14 @@ model_config = {
     "jed0011": "icon-mpim",
     "jed0022": "icon-mpim-4K",
     "jed0033": "icon-mpim-2K",
+    "jed2224": "icon-mpim-4K",
 }
 
 exp_name = {
     "jed0011": "control",
     "jed0022": "plus4K",
     "jed0033": "plus2K",
+    "jed2224": "const_o3",
 }
 
 for run in runs:
