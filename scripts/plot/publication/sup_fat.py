@@ -2,7 +2,7 @@
 import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
-from src.read_data import load_random_datasets, load_definitions, load_vgrid
+from src.read_data import load_random_datasets, load_definitions, load_vgrid, load_cre, load_iwp_hists
 import pandas as pd
 
 # %% load CRE data
@@ -12,9 +12,14 @@ runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles =
 iwp_bins = np.logspace(-4, np.log10(40), 51)
 iwp_points = (iwp_bins[:-1] + iwp_bins[1:]) / 2
 datasets = load_random_datasets()
+cre = load_cre()
+histograms = load_iwp_hists()
 vgrid = load_vgrid()
 datasets['jed2224'] = xr.open_dataset(
     "/work/bm1183/m301049/icon_hcap_data/const_o3/production/random_sample/jed2224_randsample_processed_64.nc"
+)
+cre['jed2224'] = xr.open_dataset(
+    "/work/bm1183/m301049/icon_hcap_data/const_o3/production/cre/jed2224_cre_raw.nc"
 )
 colors["jed2224"] = 'k'
 line_labels["jed2224"] = "+4 K const. O$_3$"
@@ -93,4 +98,19 @@ for ax, letter in zip(axes, ["a", "b"]):
         va="top",
     )
 fig.savefig("plots/publication/sup_fat.pdf", bbox_inches="tight")
+# %% calculate lw feedback 
+lw_feedback = {}
+temp_deltas = {
+    "jed0011": 0,
+    "jed0022": 4,
+    "jed0033": 2,
+    "jed2224": 4,
+}
+for run in runs[1:]:
+    lw_feedback[run] = (
+        (cre[run]["lw"] - cre[runs[0]]["lw"]) * histograms[runs[0]]
+    ).sum().values / temp_deltas[run]
+
+print(f"LW feedback reduced by {(lw_feedback['jed2224'] - lw_feedback['jed0022']):.2f} W m$^{-2}$ K$^{-1}$ by interactive ozone from {lw_feedback['jed0022']:.2f} to {lw_feedback['jed2224']:.2f} W m$^{-2}$ K$^{-1}$")
+
 # %%

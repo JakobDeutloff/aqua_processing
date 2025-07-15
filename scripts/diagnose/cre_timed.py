@@ -3,50 +3,21 @@ import xarray as xr
 from src.calc_variables import calc_cre
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 # %% load data
-runs = ["jed0011", "jed0022", "jed0033"]
-exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
+runs = ["jed0011", "jed0022", "jed0033", "jed2224"]
+exp_name = {
+    "jed0011": "control",
+    "jed0022": "plus4K",
+    "jed0033": "plus2K",
+    "jed2224": "const_o3",
+}
 datasets = {}
 for run in runs:
     datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_64.nc"
     )
-# %% construct mask height to exclude the same number of values for every iwp bin
-masks_height = {}
-mask_type = "raw"
-if mask_type == "dist_filter":
-    iwp_bins = np.logspace(-4, np.log10(40), 51)
-    masks_height["jed0011"] = datasets["jed0011"]["hc_top_temperature"] < datasets[
-        "jed0011"
-    ]["hc_top_temperature"].where(datasets["jed0011"]["iwp"] > 1e-4).quantile(0.90)
-    quantiles = (
-        (masks_height["jed0011"] * 1)
-        .groupby_bins(datasets["jed0011"]["iwp"], iwp_bins)
-        .mean()
-    )
-
-    for run in runs[1:]:
-        mask = xr.DataArray(
-            np.ones_like(datasets[run]["hc_top_temperature"]),
-            dims=datasets[run]["hc_top_temperature"].dims,
-            coords=datasets[run]["hc_top_temperature"].coords,
-        )
-        for i in range(len(iwp_bins) - 1):
-            mask_ds = (datasets[run]["iwp"] > iwp_bins[i]) & (
-                datasets[run]["iwp"] <= iwp_bins[i + 1]
-            )
-            temp_vals = datasets[run]["hc_top_temperature"].where(mask_ds)
-            mask_temp = temp_vals > temp_vals.quantile(quantiles[i])
-            # mask n_masked values with the highest temperatures from temp_vals
-            mask = xr.where(mask_ds & mask_temp, 0, mask)
-        masks_height[run] = mask
-elif mask_type == "simple_filter":
-    for run in runs:
-        masks_height[run] = datasets[run]["hc_top_temperature"] < (273.15 - 35)
-elif mask_type == "raw":
-    for run in runs:
-        masks_height[run] = True
 
 # %% calculate cre clearsky and wetsky
 for run in runs:
@@ -107,26 +78,18 @@ cre_interp = {
     "jed0011": cre_arr.copy(),
     "jed0022": cre_arr.copy(),
     "jed0033": cre_arr.copy(),
+    "jed2224": cre_arr.copy(),
 }
 
 for run in runs:
     cre_interp[run]["net"] = (
-        datasets[run]["cre_net_hc"]
-        .where(masks_height[run])
-        .groupby_bins(datasets[run]["iwp"], iwp_bins)
-        .mean()
+        datasets[run]["cre_net_hc"].groupby_bins(datasets[run]["iwp"], iwp_bins).mean()
     )
     cre_interp[run]["sw"] = (
-        datasets[run]["cre_sw_hc"]
-        .where(masks_height[run])
-        .groupby_bins(datasets[run]["iwp"], iwp_bins)
-        .mean()
+        datasets[run]["cre_sw_hc"].groupby_bins(datasets[run]["iwp"], iwp_bins).mean()
     )
     cre_interp[run]["lw"] = (
-        datasets[run]["cre_lw_hc"]
-        .where(masks_height[run])
-        .groupby_bins(datasets[run]["iwp"], iwp_bins)
-        .mean()
+        datasets[run]["cre_lw_hc"].groupby_bins(datasets[run]["iwp"], iwp_bins).mean()
     )
 
 # %% convert to xarray
@@ -157,6 +120,7 @@ colors = {
     "jed0011": "black",
     "jed0022": "red",
     "jed0033": "orange",
+    "jed2224": "blue",
 }
 for run in runs[1:]:
     axes[0].plot(
@@ -190,7 +154,8 @@ axes[2].set_ylabel("CRE lw / W m$^{-2}$")
 
 # %% save cre
 for run in runs:
-    cre_interp[run].to_netcdf(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_{mask_type}.nc"
-    )
+    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_raw.nc"
+    if os.path.exists(path):
+        os.remove(path)
+    cre_interp[run].to_netcdf(path)
 # %%

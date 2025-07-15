@@ -25,7 +25,9 @@ ozone_4K = (
 ).astype(float)
 
 datasets = load_random_datasets()
-runs, exp_name, colors, labels = load_definitions()
+runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
+    load_definitions()
+)
 # %% calculate means from random samples
 mean_ozone = {}
 for run in datasets.keys():
@@ -67,7 +69,7 @@ ax.scatter(
     2, weighted_control.values, marker="x", color='k')
 ax.set_xticks([0, 1, 2])
 ax.set_xticklabels(
-    [labels["jed0011"], labels["jed0033"], labels["jed0022"]]
+    [line_labels["jed0011"], line_labels["jed0033"], line_labels["jed0022"]]
 )
 ax.spines[["top", "right"]].set_visible(False)
 ax.set_ylabel("O3 * Cloud Fraction / kg/kg")
@@ -96,7 +98,7 @@ for run in datasets.keys():
         mean_ozone[run]["o3"].values.squeeze()
         * (mean_cf[run].values.squeeze() / mean_cf[run].max().values),
         mean_ozone[run]["pfull"].values.squeeze() / 100,
-        label=labels[run],
+        label=line_labels[run],
         color=colors[run],
     )
 
@@ -104,7 +106,7 @@ axes[2].plot(
     mean_ozone["jed0011"]["o3"].values.squeeze()
     * (mean_cf["jed0022"].values.squeeze() / mean_cf["jed0022"].max().values),
     mean_ozone["jed0011"]["pfull"].values.squeeze() / 100,
-    color=colors["jed0022"],
+    color='k',
     linestyle="--",
     label="Control O3 * 4K CF",
 )
