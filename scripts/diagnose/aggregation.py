@@ -59,6 +59,7 @@ for run in runs:
 ax.set_xticklabels(["Control", "+2 K", "+4 K"])
 ax.spines[["top", "right"]].set_visible(False)
 ax.set_ylabel("Iorg")
+fig.savefig("plots/misc/iorg_raw_boxplot.pdf", bbox_inches="tight")
 
 # %% calculate iorg local minima
 iorgs_min = {}

@@ -113,4 +113,14 @@ for run in runs[1:]:
 
 print(f"LW feedback reduced by {(lw_feedback['jed2224'] - lw_feedback['jed0022']):.2f} W m$^{-2}$ K$^{-1}$ by interactive ozone from {lw_feedback['jed0022']:.2f} to {lw_feedback['jed2224']:.2f} W m$^{-2}$ K$^{-1}$")
 
+# %% calculate temperature increase in k/k 
+means = {}
+temp_deltas = {'jed0022': 4, 'jed0033': 2, 'jed2224': 4}
+for run in runs:
+    means[run] = datasets[run]["hc_top_temperature"].where(datasets[run]["iwp"] > 1e-4).mean().values
+
+for run in runs[1:]:
+    print(
+        f"{run}: {((means[run] - means[runs[0]]) / temp_deltas[run]):.2f}  K/K"
+    )
 # %%

@@ -14,4 +14,4 @@ set -o errexit -o nounset -o pipefail -o xtrace
 export PYTHONPATH="/home/m/m301049/aqua_processing/"
 
 # execute python script in respective environment 
-/home/m/m301049/.conda/envs/main/bin/python /home/m/m301049/aqua_processing/scripts/process/regrid/concat_2d.py $1
+/home/m/m301049/.conda/envs/main/bin/python /home/m/m301049/aqua_processing/scripts/process/regrid/regrid_prw.py $1

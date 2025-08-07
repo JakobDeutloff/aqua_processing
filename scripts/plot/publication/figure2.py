@@ -11,23 +11,12 @@ runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles =
 datasets = load_random_datasets()
 vgrid = load_vgrid()
 
-# %% calculate hc temp with brightness temperature
-hc_temps = {}
-for run in runs:
-    print(run)
-    temp, p = calculate_hc_temperature_bright(
-        datasets[run],
-        vgrid["zg"],
-    )
-    datasets[run] = datasets[run].assign({"hc_top_temp_bright": temp, "hc_top_pressure_bright": p})
-
-
 # %% bin temperature
 iwp_bins = np.logspace(-4, np.log10(40), 51)
 binned_temp = {}
 for run in runs:
     binned_temp[run] = (
-        datasets[run]["hc_top_temp_bright"]
+        datasets[run]["hc_top_temperature"]
         .groupby_bins(datasets[run]["iwp"], iwp_bins)
         .mean()
     )
@@ -91,7 +80,12 @@ fig.savefig(
 
 # %% calculate mean hc temperatures
 means = {}
+temp_deltas = {'jed0022': 4, 'jed0033': 2}
 for run in runs:
-    means[run] = datasets[run]["hc_top_temp_bright"].where(datasets[run]["iwp"] > 1e-4).mean().values
-    print(f"mean hc temp {line_labels[run]} {means[run]:.2f} K")
+    means[run] = datasets[run]["hc_top_temperature"].where(datasets[run]["iwp"] > 1e-4).mean().values
+
+for run in runs[1:]:
+    print(
+        f"{run}: {((means[run] - means[runs[0]]) / temp_deltas[run]):.2f}  K/K"
+    )
 # %%
