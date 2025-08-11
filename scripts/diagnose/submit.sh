@@ -13,4 +13,4 @@ set -o errexit -o nounset -o pipefail -o xtrace
 export PYTHONPATH="/home/m/m301049/aqua_processing/"
 
 # execute python script in respective environment 
-/home/m/m301049/.conda/envs/main/bin/python /home/m/m301049/aqua_processing/scripts/diagnose/cape_cin.py $1 
+/home/m/m301049/.conda/envs/main/bin/python /home/m/m301049/aqua_processing/scripts/diagnose/hist_daily_cycle.py $1 
