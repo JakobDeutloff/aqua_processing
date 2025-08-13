@@ -23,22 +23,23 @@ print(f"Processing {run}...")
 path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/latlon/prw_icon.nc"
 if os.path.exists(path):
     print("Concatenated file exists, skipping to regridding step.")
-else:
-    print("Concatenating datasets...")
-    ds_first_month = (
-        xr.open_mfdataset(
-            f"/work/bm1183/m301049/{configs[run]}/experiments/{run}/{run}_atm_2d_19*.nc"
-        )
-        .pipe(fix_time)['prw']
+    os.remove(path)  # Remove the existing file to ensure fresh concatenation
+
+print("Concatenating datasets...")
+ds_first_month = (
+    xr.open_mfdataset(
+        f"/work/bm1183/m301049/{configs[run]}/experiments/{run}/{run}_atm_2d_19*.nc"
     )
-    ds_last_two_months = (
-        xr.open_mfdataset(
-            f"/work/bm1183/m301049/{configs[run]}/experiments/{followups[run]}/{followups[run]}_atm_2d_19*.nc"
-        )
-        .pipe(fix_time)['prw']
+    .pipe(fix_time)[['prw']]
+)
+ds_last_two_months = (
+    xr.open_mfdataset(
+        f"/work/bm1183/m301049/{configs[run]}/experiments/{followups[run]}/{followups[run]}_atm_2d_19*.nc"
     )
-    ds = xr.concat([ds_first_month, ds_last_two_months], dim="time").astype(float)
-    ds.to_netcdf(path)
+    .pipe(fix_time)[['prw']]
+)
+ds = xr.concat([ds_first_month, ds_last_two_months], dim="time").astype(float)
+ds.to_netcdf(path)
 
 # %% regrid 2D datasets
 path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/latlon"

@@ -108,9 +108,9 @@ for i, run in enumerate(runs):
 
 axes[0].set_ylabel("Temperature / K")
 axes[0].set_yticks([260, 230, 210, 190])
-axes[0].set_title("Control", color=colors['jed0011'])
-axes[1].set_title("+2 K - Control", color=colors['jed0033'])
-axes[2].set_title("+4 K - Control", color=colors['jed0022'])
+axes[0].set_title("Control")
+axes[1].set_title("+2 K - Control")
+axes[2].set_title("+4 K - Control")
 
 
 cbar_height = 0.03
@@ -123,10 +123,10 @@ cax2 = fig.add_axes([cbar_left2, cbar_bottom, 0.5, cbar_height])
 
 
 cb_net = fig.colorbar(mappable=net, cax=cax1, orientation="horizontal")
-cb_net.set_label("$H$ / K day$^{-1}$")
+cb_net.set_label("$Q$ / K day$^{-1}$")
 
 cb_diff = fig.colorbar(mappable=diff, cax=cax2, orientation="horizontal")
-cb_diff.set_label(r"$\Delta H $ / K day$^{-1}$")
+cb_diff.set_label(r"$\Delta Q $ / K day$^{-1}$")
 
 # add letters
 for i, ax in enumerate(axes):

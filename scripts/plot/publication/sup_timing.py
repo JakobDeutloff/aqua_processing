@@ -12,10 +12,6 @@ runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles =
 iwp_bins = np.logspace(-4, np.log10(40), 51)
 iwp_points = (iwp_bins[:-1] + iwp_bins[1:]) / 2
 datasets = load_random_datasets()
-vgrid = load_vgrid()
-ds_const_o3 = xr.open_dataset(
-    "/work/bm1183/m301049/icon_hcap_data/const_o3/production/random_sample/jed2224_randsample_processed_64.nc"
-)
 
 # %% mean SW down for I>1
 for run in runs:

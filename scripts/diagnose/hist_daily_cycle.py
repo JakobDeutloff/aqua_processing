@@ -67,14 +67,14 @@ for i in tqdm(range(0, len(time_slices) - 1)):
     # calculate histogram
     bins = np.arange(0, 25, 1)
     hist, edges = np.histogram(
-        sample["time_local"].where(sample["iwp"] > 5),
+        sample["time_local"].where(sample["iwp"] > 1e-1),
         bins=bins,
         density=False,
     )
     hists[i, :] = hist
 
 # %% save hists
-path = f"/work/bm1183/m301049/icon_hcap_data/{names[run]}/production/deep_clouds_daily_cycle_5.nc"
+path = f"/work/bm1183/m301049/icon_hcap_data/{names[run]}/production/deep_clouds_daily_cycle_01.nc"
 if os.path.exists(path):
     os.remove(path)
 hists.to_netcdf(path)

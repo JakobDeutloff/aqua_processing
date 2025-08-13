@@ -1,7 +1,7 @@
 # %%
 import os
 import xarray as xr
-from src.grid_helpers import merge_grid, fix_time
+from src.grid_helpers import fix_time
 import sys
 
 # %%

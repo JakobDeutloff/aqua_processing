@@ -253,7 +253,7 @@ axes[1, 2].set_xticklabels(["Area", "Opacity"], rotation=-45)
 
 # add letters
 a = list(axes[:, 0:2].flatten())
-a.append(axes[1, 2])
+a.insert(4, axes[1, 2])
 for i, ax in enumerate(a):
     ax.text(
         0.03,

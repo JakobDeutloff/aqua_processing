@@ -55,7 +55,7 @@ ax01 = fig.add_subplot(gs[0, 1])
 gs_sub = GridSpecFromSubplotSpec(2, 1, subplot_spec=gs[1, 0])
 ax10 = fig.add_subplot(gs_sub[0, 0])
 ax20 = fig.add_subplot(gs_sub[1, 0])
-axes = [ax00, ax11, ax01, ax10, ax20]
+axes = [ax00, ax01, ax10, ax20, ax11]
 
 # CRE
 ax00.axhline(0, color="k", linewidth=0.5)
@@ -133,30 +133,35 @@ for ax in [ax20, ax11]:
     ax.set_xlabel("$I$ / kg m$^{-2}$")
 
 # legends
-for ax in [ax10, ax20]:
-    ax.legend(frameon=False, loc="upper left", fontsize=10)
-for ax in [ax01, ax11]:
-    ax.legend(frameon=False, loc="upper right", fontsize=10)
 handles = [
     plt.Line2D([0], [0], color=lw_color),
     plt.Line2D([0], [0], color=sw_color),
     plt.Line2D([0], [0], color=net_color),
-    plt.Line2D([0], [0], color="grey"),
-    plt.Line2D([0], [0], color="grey", linestyle="--"),
     plt.Line2D([0], [0], color="grey", linestyle="-."),
+    plt.Line2D([0], [0], color="grey", linestyle="--"),
+    plt.Line2D([0], [0], color="grey", linestyle="-"),
 ]
-labels = ["LW", "SW", "Net", "+4 K", "+2 K", "Control"]
+labels = ["LW", "SW", "Net", "Control", "+2 K", "+4 K"]
 ax00.legend(
     handles=handles,
     labels=labels,
     loc="lower left",
     frameon=False,
     fontsize=10,
-    ncols=2,
+    ncols=2
+    )
+
+ax01.legend(
+    loc="upper right",
+    frameon=False,
+    fontsize=10,
+    ncol=1,
+
 )
 
+
 # add letters
-for ax, letter in zip([ax00, ax10, ax20, ax01, ax11], ["a", "b", "c", "d", "e"]):
+for ax, letter in zip(axes, ["a", "b", "c", "d", "e"]):
     ax.text(0.03, 1, letter, transform=ax.transAxes, fontsize=14, fontweight="bold")
 
 fig.tight_layout()
