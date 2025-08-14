@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import numpy as np
 from tqdm import tqdm
+import matplotlib as mpl
+import datetime as dt
+
+mpl.use("WebAgg")  # Use WebAgg backend for interactive plotting
 
 # %% load data
 ds = xr.open_dataset(
@@ -12,13 +16,18 @@ ds = xr.open_dataset(
 ds = ds.sel(time=(ds.time.dt.minute == 0) & (ds.time.dt.hour == 0))
 
 # %% check histogram
-ds["prw"].isel(time=slice(100, 110)).sel(lat=slice(-40, 40)).plot.hist(
-    bins=np.arange(0, 60, 1)
+fig, ax= plt.subplots(figsize=(8, 5))
+ds["prw"].isel(time=slice(80, 90)).sel(lat=slice(-40, 40)).plot.hist(
+    bins=np.arange(0, 60, 1),
+    ax=ax,
+    color="grey",
 )
+ax.spines[["top", "right"]].set_visible(False)
+fig.savefig('plots/moist_layers/prw_histogram_40_40.png', dpi=300, bbox_inches='tight')
 # %%
 ds_plot = (
     ds["prw"]
-    .isel(time=10)
+    .sel(time="1979-07-11")
     .sel(lon=slice(0, 360), lat=slice(-50, 50))
     .isel(lon=slice(None, None, 10), lat=slice(None, None, 10))
 )
@@ -38,7 +47,36 @@ ds_plot.plot.contour(
     levels=[24],
     colors="r",
 )
+plt.show()
 # %%
+
+
+def plot_prw_field(ds):
+    ds_plot = ds.sel(lon=slice(0, 360), lat=slice(-50, 50)).isel(
+        lon=slice(None, None, 10), lat=slice(None, None, 10)
+    )
+    pad = 2  # for a window of 5, pad by 2 on each side
+    ds_plot = ds_plot.pad(lon=(pad, pad), mode="wrap")
+    ds_plot = ds_plot.rolling(lon=5, lat=5, center=True).mean()
+
+    fig, ax = plt.subplots(
+        figsize=(10, 3), subplot_kw={"projection": ccrs.PlateCarree()}
+    )
+    ds_plot.plot.contourf(
+        ax=ax,
+        transform=ccrs.PlateCarree(),
+        levels=np.arange(15, 66, 3),
+    )
+    ds_plot.plot.contour(
+        ax=ax,
+        transform=ccrs.PlateCarree(),
+        levels=[24],
+        colors="r",
+    )
+    gl = ax.gridlines(draw_labels=True, linewidth=0) 
+    gl.top_labels = False
+    gl.right_labels = False
+    return fig, ax 
 
 def haversine(lon1, lat1, lon2, lat2):
     # Convert degrees to radians
@@ -60,7 +98,9 @@ def contour(ds):
         .rolling(lon=5, lat=5, center=True)
         .mean()
     )
-    fig, ax = plt.subplots(figsize=(10, 5), subplot_kw={"projection": ccrs.PlateCarree()})
+    fig, ax = plt.subplots(
+        figsize=(10, 5), subplot_kw={"projection": ccrs.PlateCarree()}
+    )
     contour = ds_plot.plot.contour(
         ax=ax,
         transform=ccrs.PlateCarree(),
@@ -68,40 +108,51 @@ def contour(ds):
         colors="r",
     )
     plt.close(fig)
+    # plt.show()
     return contour
+
 
 def get_contour_length(ds):
     cont = contour(ds)
-    v = cont.allsegs[0][0] 
-    lon = v[:, 0]
-    lat = v[:, 1]
-    # Calculate geodesic distance between consecutive points
-    segment_lengths = haversine(lon[:-1], lat[:-1], lon[1:], lat[1:])
-    if np.min(segment_lengths) < 0:
-        raise ValueError("Negative segment length found, check data.")
-    length_km = segment_lengths.sum()
-    return length_km
+    total_length = 0.0
+    # Iterate over all segments at the first (and only) level
+    for segment in cont.allsegs[0]:
+        lon = segment[:, 0]
+        lat = segment[:, 1]
+        segment_lengths = haversine(lon[:-1], lat[:-1], lon[1:], lat[1:])
+        total_length += segment_lengths.sum()
+    return total_length
 
 
-# %% calculate cntourlength
-contour_lenghts_2 = []
+# %% calculate contourlength
+contour_lenghts = []
 for t in tqdm(ds["time"]):
-    cont_length = get_contour_length(ds['prw'].sel(time=t))
-    contour_lenghts_2.append(int(cont_length))
+    cont_length = get_contour_length(ds["prw"].sel(time=t))
+    contour_lenghts.append(int(cont_length))
 
-contour_lenghts_2 = xr.DataArray(
-    contour_lenghts_2/np.max(contour_lenghts_2),
+contour_lenghts = xr.DataArray(
+    contour_lenghts / np.max(contour_lenghts),
     dims=["time"],
     coords={"time": ds["prw"].time},
-    attrs={
-        "long_name": "Contour length of 24 mm PRW"}
+    attrs={"long_name": "Contour length of 24 mm PRW"},
 )
 
 # %% plot contour length
 fig, ax = plt.subplots(figsize=(10, 5))
-contour_lenghts_2.plot(ax=ax, color="r", label="Contour length")
+contour_lenghts.plot(ax=ax, color="k", label="Contour length")
 ax.set_xlabel("Time")
-ax.set_ylabel("Normalized contour length")
-ax.legend()
+ax.set_ylabel("Normalized 24 mm contour length")
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+ax.axvline(x=dt.datetime.strptime("1979-07-14", "%Y-%m-%d"), color="grey")
+ax.axvline(x=dt.datetime.strptime("1979-09-23", "%Y-%m-%d"), color="grey")
+fig.savefig('plots/moist_layers/contour_length.png', dpi=300, bbox_inches='tight')
+
+# %%
+fig, ax = plot_prw_field(ds["prw"].sel(time="1979-07-14"))
+fig.savefig('plots/moist_layers/prw_field_1979-07-14.png', dpi=300, bbox_inches='tight')
+fig, ax = plot_prw_field(ds["prw"].sel(time="1979-09-23"))
+fig.savefig('plots/moist_layers/prw_field_1979-09-23.png', dpi=300, bbox_inches='tight') 
+
 
 # %%
