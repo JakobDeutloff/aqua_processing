@@ -4,10 +4,10 @@ import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import numpy as np
 from tqdm import tqdm
-import matplotlib as mpl
+from src.grid_helpers import merge_grid, fix_time
 import datetime as dt
 
-mpl.use("WebAgg")  # Use WebAgg backend for interactive plotting
+# mpl.use("WebAgg")  # Use WebAgg backend for interactive plotting
 
 # %% load data
 ds = xr.open_dataset(
@@ -16,14 +16,53 @@ ds = xr.open_dataset(
 ds = ds.sel(time=(ds.time.dt.minute == 0) & (ds.time.dt.hour == 0))
 
 # %% check histogram
-fig, ax= plt.subplots(figsize=(8, 5))
-ds["prw"].isel(time=slice(80, 90)).sel(lat=slice(-40, 40)).plot.hist(
+fig, ax = plt.subplots(figsize=(8, 5))
+ds["prw"].isel(time=slice(80, 90)).sel(lat=slice(-20, 20)).plot.hist(
     bins=np.arange(0, 60, 1),
     ax=ax,
     color="grey",
 )
 ax.spines[["top", "right"]].set_visible(False)
-fig.savefig('plots/moist_layers/prw_histogram_40_40.png', dpi=300, bbox_inches='tight')
+fig.savefig("plots/moist_layers/prw_histogram_20_20.png", dpi=300, bbox_inches="tight")
+
+# %% plot pr vs prw
+ds_2d = (
+    xr.open_dataset(
+        "/work/bm1183/m301049/icon-mpim/experiments/jed0011/jed0011_atm_2d_19790729T000040Z.15371960.nc"
+    )
+    .pipe(merge_grid)
+    .pipe(fix_time)
+)
+
+fig, ax = plt.subplots(figsize=(8, 5))
+prw_bins = np.arange(0, 71, 1)
+binned_pr = (
+    (ds_2d["pr"]*60*60*24)
+    .isel(time=0)
+    .where((ds_2d["clat"] < 20) & (ds_2d["clat"] > -20))
+    .groupby_bins(ds_2d["prw"].isel(time=0), bins=prw_bins)
+)
+binned_pr.mean().plot(ax=ax, color="k", label="Mean PR")
+ax.spines[["top", "right"]].set_visible(False)
+ax.set_xlabel("Water Vapor Path / mm$")
+ax.set_ylabel("Precipitation / mm day$^{-1}$")
+ax.set_title("")
+ax.set_ylim(0, 100)
+fig.savefig("plots/moist_layers/pr_vs_prw.png", dpi=300, bbox_inches="tight")
+
+# %% plot precip histogram
+fig, ax = plt.subplots(figsize=(8, 5))
+ds_2d["pr"].isel(time=slice(80, 90)).where(
+    (ds_2d["clat"] < 20) & (ds_2d["clat"] > -20), drop=True
+).plot.hist(
+    bins=np.arange(0, 0.05, 0.01),
+    ax=ax,
+    color="grey",
+)
+ax.spines[["top", "right"]].set_visible(False)
+ax.set_xlabel("Precipitation / kg m$^{-2}$ s$^{-1}$")
+ax.set_ylabel("Frequency")
+fig.savefig("plots/moist_layers/pr_histogram_20_20.png", dpi=300, bbox_inches="tight")
 # %%
 ds_plot = (
     ds["prw"]
@@ -73,10 +112,11 @@ def plot_prw_field(ds):
         levels=[24],
         colors="r",
     )
-    gl = ax.gridlines(draw_labels=True, linewidth=0) 
+    gl = ax.gridlines(draw_labels=True, linewidth=0)
     gl.top_labels = False
     gl.right_labels = False
-    return fig, ax 
+    return fig, ax
+
 
 def haversine(lon1, lat1, lon2, lat2):
     # Convert degrees to radians
@@ -146,13 +186,13 @@ ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 ax.axvline(x=dt.datetime.strptime("1979-07-14", "%Y-%m-%d"), color="grey")
 ax.axvline(x=dt.datetime.strptime("1979-09-23", "%Y-%m-%d"), color="grey")
-fig.savefig('plots/moist_layers/contour_length.png', dpi=300, bbox_inches='tight')
+fig.savefig("plots/moist_layers/contour_length.png", dpi=300, bbox_inches="tight")
 
 # %%
 fig, ax = plot_prw_field(ds["prw"].sel(time="1979-07-14"))
-fig.savefig('plots/moist_layers/prw_field_1979-07-14.png', dpi=300, bbox_inches='tight')
+fig.savefig("plots/moist_layers/prw_field_1979-07-14.png", dpi=300, bbox_inches="tight")
 fig, ax = plot_prw_field(ds["prw"].sel(time="1979-09-23"))
-fig.savefig('plots/moist_layers/prw_field_1979-09-23.png', dpi=300, bbox_inches='tight') 
+fig.savefig("plots/moist_layers/prw_field_1979-09-23.png", dpi=300, bbox_inches="tight")
 
 
 # %%

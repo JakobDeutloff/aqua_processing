@@ -213,10 +213,10 @@ def calc_connected(ds, zg, frac_no_cloud=0.05, mean_height=11645):
 
     # define ice and liquid content needed for connectedness
     no_ice_cloud = (
-        ice > (frac_no_cloud * (mean_height / cloud_height) ** 7 * ice.max("height"))
+        ice > (frac_no_cloud * (mean_height / cloud_height) ** 0 * ice.max("height"))
     ) * 1
     no_liq_cloud = (
-        liq > (frac_no_cloud * (mean_height / cloud_height) ** 7 * liq.max("height"))
+        liq > (frac_no_cloud * (mean_height / cloud_height) ** 0 * liq.max("height"))
     ) * 1
     no_cld = (
         no_liq_cloud + no_ice_cloud

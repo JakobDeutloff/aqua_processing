@@ -8,7 +8,7 @@ from src.calc_variables import (
 import os
 
 # %% load data
-runs = ["jed2224"]
+runs = ["jed0011", "jed0022", "jed0033"]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K", "jed2224": "const_o3"}
 datasets = {}
 for run in runs:
@@ -74,7 +74,7 @@ for run in runs:
 # %% save processed data as float64
 for run in runs:
     print(f"Saving processed data for {run}...")
-    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_64.nc"
+    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_64_conn0.nc"
     if os.path.exists(path):
         os.remove(path)
     datasets[run].chunk(chunks={}).astype(float).to_netcdf(path)

@@ -18,7 +18,7 @@ T_delta = {
 hists = {}
 for run in runs:
     hists[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/deep_clouds_daily_cycle.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/deep_clouds_daily_cycle_01.nc"
     )
 hists_5 = {}
 for run in runs:
@@ -39,7 +39,7 @@ histograms_iwp = {}
 histograms_iwp_5 = {}
 edges = np.arange(0, 25, 1)
 for run in runs:
-    histograms_iwp[run] = (hists[run].sum("day") / hists[run].sum())[
+    histograms_iwp[run] = (hists[run].sum("day") / hists['jed0011'].sum())[
         "__xarray_dataarray_variable__"
     ].values
     histograms_iwp_5[run] = (hists_5[run].sum("day") / hists_5[run].sum())[
@@ -69,7 +69,7 @@ for ax in [ax1, ax2]:
     ax.set_xlabel("Local Time / h")
 
 ax1.set_ylabel("P($I$ > 1 kg m$^{-2}$)")
-ax1.set_ylim([0.03, 0.055])
+ax1.set_ylim([0.03, 0.06])
 ax1.set_yticks([0.03, 0.04, 0.05])
 ax2.set_ylim([0, 1400])
 ax2.set_ylabel("Incoming SW Radiation / W m$^{-2}$", color='grey')
@@ -78,7 +78,7 @@ ax2.tick_params(axis='y', labelcolor='grey')
 # add legend
 ax1.legend(frameon=False)
 
-fig.savefig("plots/publication/figure3_alt.pdf", bbox_inches="tight")
+#fig.savefig("plots/publication/figure3_alt.pdf", bbox_inches="tight")
 
 # %% calculate time difference to noon 
 mean_rad_time = {}

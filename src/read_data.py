@@ -81,9 +81,13 @@ def load_iwp_hists():
     dict
         Dictionary containing the IWP histograms.
     """
-
-    with open("/work/bm1183/m301049/icon_hcap_data/iwp_dists.pkl", "rb") as f:
-        iwp_hists = pickle.load(f)
+    iwp_hists = {}
+    for run in runs:
+        with open(
+            f"/work/bm1183/m301049/icon_hcap_data/{experiments[run]}/production/{run}_iwp_hist.pkl",
+            "rb",
+        ) as f:
+            iwp_hists[run] = pickle.load(f)
 
     return iwp_hists
 
@@ -225,17 +229,13 @@ def load_daily_2d_data(vars, frequency="day", tropics_only=True, load=True):
                 drop=True,
             )
 
-
         if load:
             datasets[run] = xr.concat(
                 [ds_first_month, ds_last_two_months], dim="time"
             ).load()
         else:
-            datasets[run] = xr.concat(
-                [ds_first_month, ds_last_two_months], dim="time"
-            )
+            datasets[run] = xr.concat([ds_first_month, ds_last_two_months], dim="time")
     return datasets
-
 
 
 def load_daily_average_2d_data(vars):
@@ -292,6 +292,7 @@ def load_cape_cin():
 
     return cape_cin_data
 
+
 def load_definitions():
     """
     Load the definitions for the runs, experiment names, colors, and labels.
@@ -310,11 +311,11 @@ def load_definitions():
         "jed0033": "--",
     }
     sw_color = "#125fd3"
-    lw_color= "#bd154a"
-    net_color ="#000000"
+    lw_color = "#bd154a"
+    net_color = "#000000"
     labels = {
-    "jed0011": "Control",
-    "jed0022": "+4 K",
-    "jed0033": "+2 K",
-    }   
+        "jed0011": "Control",
+        "jed0022": "+4 K",
+        "jed0033": "+2 K",
+    }
     return runs, exp_name, colors, labels, sw_color, lw_color, net_color, linestyles
