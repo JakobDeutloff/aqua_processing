@@ -293,10 +293,10 @@ ax.legend(handles, labels)
 iwp_bins = np.logspace(-4, np.log10(40), 31)
 fig, axes = plt.subplots(2, 1, figsize=(5, 5), sharex=True)
 for run in runs:
-    datasets[run]["cape"].groupby_bins(datasets[run]["iwp"], iwp_bins).mean().plot(
+    ds_cape[run]["cape"].groupby_bins(datasets[run]["iwp"], iwp_bins).mean().plot(
         ax=axes[0], label=exp_name[run], color=colors[run]
     )
-    datasets[run]["cin"].groupby_bins(datasets[run]["iwp"], iwp_bins).mean().plot(
+    ds_cape[run]["cin"].groupby_bins(datasets[run]["iwp"], iwp_bins).mean().plot(
         ax=axes[1], label=exp_name[run], color=colors[run]
     )
 
@@ -305,12 +305,10 @@ axes[0].set_xscale("log")
 fig, axes = plt.subplots(2, 1, figsize=(8, 8), sharex=True)
 bins = np.arange(0, 25, 1)
 for run in runs:
-    mask = (datasets[run]["iwp"] < 1e-4) & (datasets[run]["lwp"] < 1e-4)
 
     axes[0].plot(
         bins[1:],
-        datasets[run]["cape"]
-        .where(mask)
+        ds_cape[run]["cape"]
         .groupby_bins(datasets[run]["time_local"], bins)
         .mean(),
         label=exp_name[run],
@@ -318,8 +316,7 @@ for run in runs:
     )
     axes[1].plot(
         bins[1:],
-        datasets[run]["cin"]
-        .where(mask)
+        ds_cape[run]["cin"]
         .groupby_bins(datasets[run]["time_local"], bins)
         .mean(),
         label=exp_name[run],

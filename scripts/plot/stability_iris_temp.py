@@ -27,7 +27,7 @@ for run in runs:
         f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_tgrid_20.nc"
     ).sel(temp=slice(200, None))
     ds = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_64.nc"
     ).sel(index=slice(0, 1e6))
     # Assign all variables from ds to datasets if dim == index
     datasets[run] = datasets[run].assign(
@@ -39,7 +39,7 @@ masks_clearsky = {}
 for run in runs:
     masks_clearsky[run] = (
         datasets[run]["clivi"] + datasets[run]["qsvi"] + datasets[run]["qgvi"]
-    ) < 1e-1
+    ) < 1e-2
 
 # %% calculte stability iris parameters in /K
 hrs = {}
@@ -417,94 +417,34 @@ fig.tight_layout()
 fig.savefig("plots/iwp_drivers/flux_conv_temp.png", dpi=300, bbox_inches="tight")
 
 
-# %%
-def calc_rel_hum(hus, ta, p):
-    e_sat = 6.112 * np.exp((22.46 * (ta - 273.15)) / ((ta - 273.15) + 272.62))
-    e = hus * p / (0.622 + hus)
-    return e / e_sat
-
-
-rel_hum = {}
-spec_hum = {}
+# %% look at stability changes between day and night 
+stab_day = {}
+stab_night = {}
 for run in runs:
-    rel_hum[run] = calc_rel_hum(
-        datasets[run]["hus"],
-        datasets[run]["ta"],
-        datasets[run]["pfull"],
-    )
+    mask_day = (datasets[run]["time_local"] > 6) & (datasets[run]['time_local']<18)
+    stab_day[run] = stab[run].where(mask_day).mean("index")
+    stab_night[run] = stab[run].where(~mask_day).mean("index")
 
-    rel_hum[run] = rel_hum[run].where(masks_clearsky[run]).mean("index")
-    spec_hum[run] = datasets[run]["hus"].where(masks_clearsky[run]).mean("index")
-
-# %% plot absolute humidity
-fig, axes = plt.subplots(2, 2, figsize=(8, 8), sharey=True)
-
+fig, axes = plt.subplots(1, 3, figsize=(10, 6), sharey=True)
 
 for run in runs:
-    axes[0, 0].plot(
-        rel_hum[run],
-        rel_hum[run]["temp"],
-        label=exp_name[run],
+    axes[0].plot(
+        stab_day[run],
+        stab_day[run]["temp"],
+        label=line_labels[run],
         color=colors[run],
     )
-
-    axes[0, 1].plot(
-        spec_hum[run],
-        spec_hum[run]["temp"],
-        label=exp_name[run],
+    axes[1].plot(
+        stab_night[run],
+        stab_night[run]["temp"],
+        label=line_labels[run],
         color=colors[run],
     )
-
-    if run in ["jed0022", "jed0033"]:
-
-        axes[1, 0].plot(
-            (rel_hum[run] - rel_hum["jed0011"]) / rel_hum["jed0011"] * 100,
-            rel_hum["jed0011"]["temp"],
-            label=exp_name[run],
-            color=colors[run],
-            linestyle="-",
-        )
-
-        axes[1, 1].plot(
-            (spec_hum[run] - spec_hum["jed0011"]) / spec_hum["jed0011"] * 100,
-            spec_hum["jed0011"]["temp"],
-            label=exp_name[run],
-            color=colors[run],
-            linestyle="-",
-        )
-
-
-for ax in axes.flatten():
-    ax.spines[["top", "right"]].set_visible(False)
-
-axes[0, 0].set_xlabel("Relative humidity / %")
-axes[0, 1].set_xlabel("Specific humidity / kg kg$^{-1}$")
-axes[1, 0].set_xlabel("Relative humidity difference / %")
-axes[1, 1].set_xlabel("Specific humidity difference / %")
-
-for ax in axes[:, 0]:
-    ax.set_ylabel("Temperature / K")
-    ax.invert_yaxis()
-    ax.set_ylim([260, 213])
-
-axes[0, 1].set_xscale("log")
-fig.tight_layout()
-fig.savefig("plots/iwp_drivers/humidity_temp.png", dpi=300)
-
-# %% plot ozone
-fig, ax = plt.subplots(figsize=(4, 6))
-for run in runs:
-    ax.plot(
-        datasets[run]["o3"].mean("index"),
-        datasets[run]["temp"],
-        label=exp_name[run],
+    axes[2].plot(
+        stab_day[run] - stab_night[run],
+        stab_day[run]["temp"],
+        label=line_labels[run],
         color=colors[run],
     )
-
-ax.set_xlabel("Ozone / kg kg$^{-1}$")
-ax.set_ylabel("Temperature / K")
-ax.spines[["top", "right"]].set_visible(False)
-ax.invert_yaxis()
-fig.savefig("plots/iwp_drivers/ozone_temp.png", dpi=300, bbox_inches="tight")
 
 # %%

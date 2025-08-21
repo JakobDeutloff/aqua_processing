@@ -86,17 +86,7 @@ fig.legend(
     ncols=4,
     frameon=False,
 )
-# add letters
-for ax, letter in zip(axes, ["a", "b"]):
-    ax.text(
-        0.03,
-        1,
-        letter,
-        transform=ax.transAxes,
-        fontsize=14,
-        fontweight="bold",
-        va="top",
-    )
+
 fig.savefig("plots/publication/sup_fat.pdf", bbox_inches="tight")
 # %% calculate lw feedback 
 lw_feedback = {}

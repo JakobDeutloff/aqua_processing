@@ -2,7 +2,7 @@
 import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
-from src.read_data import load_random_datasets, load_definitions, load_vgrid
+from src.read_data import load_random_datasets, load_definitions
 import pandas as pd
 
 # %% load CRE data
@@ -75,13 +75,13 @@ fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharex=True)
 
 for run in runs:
     sw_down_binned[run].sel(iwp_bins=slice(1e-4, 10)).plot(
-        ax=axes[0], label=exp_name[run], color=colors[run]
+        ax=axes[0], label=line_labels[run], color=colors[run]
     )
     rad_time_binned[run].sel(iwp_bins=slice(1e-4, 10)).plot(
-        ax=axes[1], label=exp_name[run], color=colors[run]
+        ax=axes[1], label=line_labels[run], color=colors[run]
     )
     lat_binned[run].sel(iwp_bins=slice(1e-4, 10)).plot(
-        ax=axes[2], label=exp_name[run], color=colors[run]
+        ax=axes[2], label=line_labels[run], color=colors[run]
     )
 
 axes[0].set_ylabel("SW down / W m$^{-2}$")
@@ -93,6 +93,15 @@ for ax in axes:
     ax.spines[["top", "right"]].set_visible(False)
 
 axes[1].invert_yaxis()
+handles, labels = axes[0].get_legend_handles_labels()
+fig.legend(
+    handles,
+    labels,
+    loc="lower center",
+    ncol=3,
+    bbox_to_anchor=(0.5, -0.1),
+    frameon=False,
+)
 fig.savefig("plots/publication/S1.pdf", bbox_inches="tight")
 
 
