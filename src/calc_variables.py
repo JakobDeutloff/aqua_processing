@@ -374,7 +374,7 @@ def calc_heating_rates(rho, rs, rl, zg, z_var="temp"):
         "units": "K/day",
         "long_name": "Net heating rate",
     }
-    hr_arr["temp"] = (rho["temp"][1:].values + rho["temp"][:-1].values) / 2
+    hr_arr[z_var] = (zg[z_var][1:].values + zg[z_var][:-1].values) / 2
 
     return hr_arr
 

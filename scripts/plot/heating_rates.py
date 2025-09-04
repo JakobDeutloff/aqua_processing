@@ -2,19 +2,14 @@
 import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
+from src.read_data import load_random_datasets
+from src.calc_variables import calc_heating_rates
 
 # %% load data
 runs = ["jed0011", "jed0033", "jed0022"]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
-datasets = {}
-hrs = {}
-for run in runs:
-    datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
-    ).sel(index=slice(0, 1e6))
-    hrs[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_heating_rates.nc"
-    ).sel(index=slice(0, 1e6))
+datasets = load_random_datasets()
+
 
 vgrid = (
     xr.open_dataset(
@@ -23,109 +18,66 @@ vgrid = (
     .mean("ncells")
     .rename({"height": "height_2", "height_2": "height"})
 )
-# %% bin hrs by iwp
-hrs_binned_net = {}
-hrs_binned_sw = {}
-hrs_binned_lw = {}
-masks_hc = {}
-iwp_bins = np.logspace(-4, 1, 51)
-iwp_points = (iwp_bins[:-1] + iwp_bins[1:]) / 2
 
+# %% get moist and dry profiles
+hrs_dry = {}
+hrs_moist = {}
 for run in runs:
-    hrs_binned_net[run] = (
-        hrs[run]["net_hr"].groupby_bins(datasets[run]["iwp"], bins=iwp_bins).mean()
+    print(run)
+    mask_moist = datasets[run]["iwp"] > 1
+    mask_dry = datasets[run]["iwp"] < 1e-10
+    hrs_dry[run] = calc_heating_rates(
+        datasets[run]['rho'].where(mask_dry),
+        datasets[run]['rsd'].where(mask_dry) - datasets[run]['rsu'].where(mask_dry),
+        datasets[run]['rld'].where(mask_dry) - datasets[run]['rlu'].where(mask_dry),
+        vgrid['zg'],
+        'height'
     )
-    hrs_binned_sw[run] = (
-        hrs[run]["sw_hr"].groupby_bins(datasets[run]["iwp"], bins=iwp_bins).mean()
-    )
-    hrs_binned_lw[run] = (
-        hrs[run]["lw_hr"].groupby_bins(datasets[run]["iwp"], bins=iwp_bins).mean()
+    hrs_moist[run] = calc_heating_rates(
+        datasets[run]['rho'].where(mask_moist),
+        datasets[run]['rsd'].where(mask_moist) - datasets[run]['rsu'].where(mask_moist),
+        datasets[run]['rld'].where(mask_moist) - datasets[run]['rlu'].where(mask_moist),
+        vgrid['zg'],
+        'height'
     )
 
-# %% calculate cf
-cf = {}
-cf_binned = {}
+# %% bin heating rates by local time and calculate mean temperature profile
+hrs_dry_binned = {}
+hrs_moist_binned = {}
+t_profiles_dry = {}
+t_profiles_moist = {}
+time_bins = np.arange(0, 25, 1)
+time_points = (time_bins[:-1] + time_bins[1:]) / 2
 for run in runs:
-    cf[run] = (
-        (
-            datasets[run]["cli"]
-            + datasets[run]["clw"]
-            + datasets[run]["qr"]
-            + datasets[run]["qg"]
-            + datasets[run]["qs"]
-        )
-        > 5e-7
-    ).astype(int)
-    cf_binned[run] = cf[run].groupby_bins(datasets[run]["iwp"], bins=iwp_bins).mean()
-
-# %% look at mean heating rates over 6 km
-fig, axes = plt.subplots(3, 3, figsize=(16, 16), sharex=True, sharey=True)
-
-max_height = np.abs(vgrid["zg"] - 18e3).argmin("height").values
-min_height = np.abs(vgrid["zg"] - 6e3).argmin("height").values
-
-for i, run in enumerate(runs):
-    net = axes[i, 0].pcolormesh(
-        iwp_points,
-        vgrid["zg"].isel(height=slice(max_height, min_height)).values / 1e3,
-        hrs_binned_net[run].isel(height=slice(max_height, min_height)).T,
-        cmap="seismic",
-        vmin=-5,
-        vmax=5,
+    print(run)
+    hrs_dry_binned[run] = (
+        hrs_dry[run]["net_hr"]
+        .groupby_bins(datasets[run]["time_local"], bins=time_bins)
+        .mean()
+    )
+    hrs_moist_binned[run] = (
+        hrs_moist[run]["net_hr"]
+        .groupby_bins(datasets[run]["time_local"], bins=time_bins)
+        .mean()
+    )
+    t_profiles_dry[run] = (
+        datasets[run]["ta"]
+        .where(datasets[run]["iwp"] < 1e-10)
+        .mean('index')
+    )
+    t_profiles_moist[run] = (
+        datasets[run]["tg"]
+        .where(datasets[run]["iwp"] > 1)
+        .mean('index')
     )
 
-    lw = axes[i, 1].pcolormesh(
-        iwp_points,
-        vgrid["zg"].isel(height=slice(max_height, min_height)).values / 1e3,
-        hrs_binned_lw[run].isel(height=slice(max_height, min_height)).T,
-        cmap="seismic",
-        vmin=-5,
-        vmax=5,
-    )
+# %% plot 
+fig, axes = plt.subplots(3, 3, figsize=(15, 10), sharey=True, sharex=True)
 
-    sw = axes[i, 2].pcolormesh(
-        iwp_points,
-        vgrid["zg"].isel(height=slice(max_height, min_height)).values / 1e3,
-        hrs_binned_sw[run].isel(height=slice(max_height, min_height)).T,
-        cmap="Reds",
-        vmin=0,
-        vmax=5,
-    )
+# plot control run  in first row
+axes[0, 0].pcolormesh(
+    time_points,
+    t_profiles_dry['jed0011'], 
+    hrs_dry_binned['jed0011'].T,
 
-    for ax in axes[i, :]:
-        contour = ax.contour(
-            iwp_points,
-            vgrid["zg"].isel(height=slice(max_height, min_height)).values / 1e3,
-            cf_binned[run].isel(height=slice(max_height, min_height)).T,
-            colors="k",
-            levels=[0.1, 0.3, 0.5, 0.7, 0.9],
-        )
-        ax.clabel(contour, inline=True, fontsize=8, fmt="%1.1f")
-
-
-for ax in axes.flatten():
-    ax.set_xscale("log")
-    ax.set_xlim(iwp_bins[0], iwp_bins[-1])
-
-
-fig.text(0.07, 0.77, "Control", fontsize=14, rotation=90)
-fig.text(0.07, 0.56, "+2K", fontsize=14, rotation=90)
-fig.text(0.07, 0.34, "+4K", fontsize=14, rotation=90)
-
-for ax in axes[:, 0]:
-    ax.set_ylabel("Height / km")
-
-for ax in axes[2, :]:
-    ax.set_xlabel("$I$ / kg m$^{-2}$")
-
-cb_net = fig.colorbar(mappable=net, ax=axes[:, 0], orientation="horizontal", pad=0.05)
-cb_net.set_label("Net heating rate / K day$^{-1}$")
-cb_lw = fig.colorbar(mappable=lw, ax=axes[:, 1], orientation="horizontal", pad=0.05)
-cb_lw.set_label("LW heating rate / K day$^{-1}$")
-cb_sw = fig.colorbar(mappable=sw, ax=axes[:, 2], orientation="horizontal", pad=0.05)
-cb_sw.set_label("SW heating rate / K day$^{-1}$")
-
-fig.savefig("plots/iwp_drivers/heating_rates.png", dpi=300, bbox_inches="tight")
-
-
-# %%
+)

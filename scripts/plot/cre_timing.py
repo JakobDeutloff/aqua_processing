@@ -2,9 +2,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import curve_fit
-from src.read_data import load_random_datasets, load_cape_cin, load_vgrid
+from src.read_data import load_random_datasets, load_cape_cin, load_vgrid, load_definitions
+
 # %% load CRE data
-runs = ["jed0011", "jed0033", "jed0022"]
+runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
+    load_definitions()
+)
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 colors = {"jed0011": "k", "jed0022": "red", "jed0033": "orange"}
 iwp_bins = np.logspace(-4, np.log10(40), 51)
@@ -365,6 +368,58 @@ for run in runs:
         color=colors[run],
         alpha=0.5,
     )
+
+
+# %% bin fluxes 
+latent_flux = {}
+sensible_flux = {}
+bins = np.arange(0, 25, 1)
+
+for run in runs:
+    mask = datasets[run]['iwp']<1e-2
+    latent_flux[run] = (
+        datasets[run]["ta"].sel(height=60).where(mask).groupby_bins(datasets[run]["time_local"], bins).mean()
+    )
+    sensible_flux[run] = (
+        datasets[run]["hfss"].where(mask).groupby_bins(datasets[run]["time_local"], bins).mean()
+    )
+
+
+# %% plot fluxes
+fig, axes = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+for run in runs:
+    latent_flux[run].plot(
+        ax=axes[0], label=exp_name[run], color=colors[run]
+    )
+    sensible_flux[run].plot(
+        ax=axes[1], label=exp_name[run], color=colors[run]
+    )   
+
+for ax in axes:
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.set_xlabel("Local Time / h")
+
+# %% look at lower troposphere temperature profiles
+t_profile_day = {}
+t_profile_night = {}
+for run in runs:
+    print(run)
+    mask_day = (datasets[run]['time_local']> 12) & (datasets[run]['time_local'] < 16)
+    mask_night = (datasets[run]['time_local']< 4)
+    mask = (datasets[run]["iwp"] < 1e-2) & (datasets[run]['lwp']<1e-2)
+    t_profile_day[run] = (
+        datasets[run]["ta"].where(mask&mask_day).mean('index')
+    )
+    t_profile_night[run] = (
+        datasets[run]["ta"].where(mask&mask_night).mean('index')
+    )
+# %%
+fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+for run in runs:
+    ax.plot(t_profile_day[run] - t_profile_night[run], vgrid['zg'], 
+            label=exp_name[run], color=colors[run])
+    
+ax.set_ylim([0, 15e3])
 
 
 # %%

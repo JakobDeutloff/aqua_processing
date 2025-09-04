@@ -39,8 +39,6 @@ ax.set_xscale("log")
 
 
 # %% bin quantities
-iwp_bins = np.logspace(-4, np.log10(40), 51)
-iwp_points = (iwp_bins[:-1] + iwp_bins[1:]) / 2
 time_binned = {}
 rad_time_binned = {}
 sw_down_binned = {}
@@ -74,13 +72,13 @@ for run in runs:
 fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharex=True)
 
 for run in runs:
-    sw_down_binned[run].sel(iwp_bins=slice(1e-4, 10)).plot(
+    sw_down_binned[run].sel(iwp_bins=slice(1e-4, 20)).plot(
         ax=axes[0], label=line_labels[run], color=colors[run]
     )
-    rad_time_binned[run].sel(iwp_bins=slice(1e-4, 10)).plot(
+    rad_time_binned[run].sel(iwp_bins=slice(1e-4, 20)).plot(
         ax=axes[1], label=line_labels[run], color=colors[run]
     )
-    lat_binned[run].sel(iwp_bins=slice(1e-4, 10)).plot(
+    lat_binned[run].sel(iwp_bins=slice(1e-4, 20)).plot(
         ax=axes[2], label=line_labels[run], color=colors[run]
     )
 
@@ -91,6 +89,7 @@ axes[0].set_xscale("log")
 for ax in axes:
     ax.set_xlabel("$I$ / $kg m^{-2}$")
     ax.spines[["top", "right"]].set_visible(False)
+    ax.set_xlim([1e-4, 20])
 
 axes[1].invert_yaxis()
 handles, labels = axes[0].get_legend_handles_labels()

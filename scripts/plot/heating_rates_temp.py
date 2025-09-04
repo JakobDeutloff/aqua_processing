@@ -26,7 +26,7 @@ hrs = {}
 hrs_binned_net = {}
 hrs_binned_sw = {}
 hrs_binned_lw = {}
-iwp_bins = np.logspace(-4, 1, 51)
+iwp_bins = np.logspace(-6, 1, 51)
 iwp_points = (iwp_bins[:-1] + iwp_bins[1:]) / 2
 for run in runs:
     print(run)
@@ -81,51 +81,53 @@ for run in runs:
     datasets[run]["time_local"].attrs = {"units": "h", "long_name": "Local time"}
 
     # calculate binned hr and cf for day and night
+    mask_day = (datasets[run]["time_local"] > 12) & (datasets[run]["time_local"] < 16)
+    mask_night = (datasets[run]["time_local"] < 4)
     hrs_binned_net_day[run] = (
         hrs[run]["net_hr"]
-        .where((datasets[run]["time_local"] > 6) & (datasets[run]["time_local"] < 18))
+        .where(mask_day)
         .groupby_bins(datasets[run]["iwp"], bins=iwp_bins)
         .mean()
     )
     hrs_binned_net_night[run] = (
         hrs[run]["net_hr"]
-        .where((datasets[run]["time_local"] < 6) | (datasets[run]["time_local"] > 18))
+        .where(mask_night)
         .groupby_bins(datasets[run]["iwp"], bins=iwp_bins)
         .mean()
     )
     hrs_binned_sw_day[run] = (
         hrs[run]["sw_hr"]
-        .where((datasets[run]["time_local"] > 6) & (datasets[run]["time_local"] < 18))
+        .where(mask_day)
         .groupby_bins(datasets[run]["iwp"], bins=iwp_bins)
         .mean()
         )
     hrs_binned_sw_night[run] = (
         hrs[run]["sw_hr"]
-        .where((datasets[run]["time_local"] < 6) | (datasets[run]["time_local"] > 18))
+        .where(mask_night)
         .groupby_bins(datasets[run]["iwp"], bins=iwp_bins)
         .mean()
     )
     hrs_binned_lw_day[run] = (
         hrs[run]["lw_hr"]
-        .where((datasets[run]["time_local"] > 6) & (datasets[run]["time_local"] < 18))
+        .where(mask_day)
         .groupby_bins(datasets[run]["iwp"], bins=iwp_bins)
         .mean()
     )
     hrs_binned_lw_night[run] = (
         hrs[run]["lw_hr"]
-        .where((datasets[run]["time_local"] < 6) | (datasets[run]["time_local"] > 18))
+        .where(mask_night)
         .groupby_bins(datasets[run]["iwp"], bins=iwp_bins)
         .mean()
     )
     cf_binned_day[run] = (
         cf[run]
-        .where((datasets[run]["time_local"] > 6) & (datasets[run]["time_local"] < 18))
+        .where(mask_day)
         .groupby_bins(datasets[run]["iwp"], bins=iwp_bins)
         .mean()
     )
     cf_binned_night[run] = (
         cf[run]
-        .where((datasets[run]["time_local"] < 6) | (datasets[run]["time_local"] > 18))
+        .where(mask_night)
         .groupby_bins(datasets[run]["iwp"], bins=iwp_bins)
         .mean()
     )     
@@ -279,7 +281,6 @@ fig.savefig(
 )
 
 
-
 # %% plot diff heatingrates
 fig, axes = plot_diff_heatingrates(hrs_binned_net, hrs_binned_lw, hrs_binned_sw, cf_binned)
 fig.savefig(
@@ -294,4 +295,90 @@ fig.savefig(
     "plots/heating_rates/heating_rates_temp_diff_night.png", dpi=300, bbox_inches="tight"
 )
 
-# %% 
+# %% differential heating dry and moist 
+
+time_bins = np.arange(0, 25, 1)
+hrs_binned_net_dry = {}
+hrs_binned_net_moist = {}
+
+for run in runs: 
+    mask_dry = datasets[run]['iwp'] < 1e-4
+    mask_moist = datasets[run]['iwp'] > 1
+    hrs_binned_net_dry[run] = (
+        hrs[run]['net_hr']
+        .where(mask_dry)
+        .groupby_bins(datasets[run]['time_local'], bins=time_bins)
+        .mean()
+    )
+    hrs_binned_net_moist[run] = (
+        hrs[run]['net_hr']
+        .where(mask_moist)
+        .groupby_bins(datasets[run]['time_local'], bins=time_bins)
+        .mean()
+    )
+
+
+
+# %% plot differential heating dry and moist
+fig, axes = plt.subplots(3, 3, figsize=(16, 12), sharex=True, sharey=True)
+
+
+dry = axes[0, 0].pcolormesh(
+    (time_bins[:-1] + time_bins[1:]) / 2,
+    hrs_binned_net_dry['jed0011']['temp'],
+    hrs_binned_net_dry['jed0011'].T,
+    cmap="seismic",
+    vmin=-2,
+    vmax=2,
+)
+moist = axes[0, 1].pcolormesh(
+    (time_bins[:-1] + time_bins[1:]) / 2,
+    hrs_binned_net_moist['jed0011']['temp'],
+    hrs_binned_net_moist['jed0011'].T,
+    cmap="seismic",
+    vmin=-2,
+    vmax=2,
+)
+diff = axes[0, 2].pcolormesh(
+    (time_bins[:-1] + time_bins[1:]) / 2,
+    hrs_binned_net_moist['jed0011']['temp'],
+    (hrs_binned_net_moist['jed0011'] - hrs_binned_net_dry['jed0011']).T,
+    cmap="seismic",
+    vmin=-2,
+    vmax=2,
+)
+
+for i, run in enumerate(runs[1:]):
+
+    dry = axes[i+1, 0].pcolormesh(
+        (time_bins[:-1] + time_bins[1:]) / 2,
+        hrs_binned_net_dry[run]['temp'],
+        (hrs_binned_net_dry[run] - hrs_binned_net_dry['jed0011']).T,
+        cmap="seismic",
+        vmin=-1,
+        vmax=1,
+    )
+    moist = axes[i+1, 1].pcolormesh(
+        (time_bins[:-1] + time_bins[1:]) / 2,
+        hrs_binned_net_moist[run]['temp'],
+        (hrs_binned_net_moist[run] - hrs_binned_net_moist['jed0011']).T,
+        cmap="seismic",
+        vmin=-1,
+        vmax=1,
+    )
+    diff = axes[i+1, 2].pcolormesh(
+        (time_bins[:-1] + time_bins[1:]) / 2,
+        hrs_binned_net_moist[run]['temp'],
+        ((hrs_binned_net_moist[run] - hrs_binned_net_dry[run]) - (hrs_binned_net_moist['jed0011'] - hrs_binned_net_dry['jed0011'])).T,
+        cmap="seismic",
+        vmin=-1,
+        vmax=1,
+    )
+    
+for ax in axes.flatten():
+    ax.set_xlim(0, 24)
+    ax.invert_yaxis()
+    ax.set_ylim([260, 190])
+    
+
+# %%

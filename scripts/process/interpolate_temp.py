@@ -12,8 +12,8 @@ run = sys.argv[1]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K", "jed2224": "const_o3"}
 
 ds = xr.open_dataset(
-    f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample.nc"
-).sel(index=slice(0, 1e6))
+    f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_64.nc"
+).sel(index=slice(0, 5e6))
 
 vgrid = (
     xr.open_dataset(
@@ -29,7 +29,7 @@ ds = ds.drop_vars([var for var in ds.variables if "height" not in ds[var].dims])
 ds = ds.assign(zg = vgrid["zg"])
 ds = ds.assign(dzghalf = vgrid["dzghalf"])
 ds = ds.assign_coords(index = ds["index"])
-ds = ds.chunk({"index": 1e3, "height": -1})
+ds = ds.chunk({"index": 5e3, "height": -1})
 ds = ds.astype(float)
 
 # %% determine tropopause height and clearsky
@@ -116,7 +116,7 @@ fig.savefig(f'plots/misc/t_tinterp_{run}.png', dpi=300, bbox_inches='tight')
 
 # %% save regridded dataset
 print("Save dataset")
-path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_tgrid_20.nc"
+path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_tgrid_5e6.nc"
 if os.path.exists(path):
     os.remove(path)
 with ProgressBar():
