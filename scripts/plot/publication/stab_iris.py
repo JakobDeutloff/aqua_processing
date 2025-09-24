@@ -14,7 +14,7 @@ from src.read_data import load_random_datasets, load_definitions
 
 
 # %%
-runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
+runs, exp_name, colors, line_labels, sw_colors, lw_colors, net_colors = (
     load_definitions()
 )
 datasets = load_random_datasets(version="temp")
@@ -80,7 +80,7 @@ for run in ["jed0022", "jed0033"]:
     )
 
 # %% plot results in /m
-fig, axes = plt.subplots(1, 4, figsize=(12, 5), sharey=True)
+fig, axes = plt.subplots(1, 4, figsize=(10, 4), sharey=True)
 plot_const_hr = True
 for run in runs:
     axes[0].plot(
@@ -154,7 +154,7 @@ for i, ax in enumerate(axes):
     )
 
 fig.tight_layout()
-fig.savefig("plots/publication/figure4.pdf", bbox_inches="tight")
+fig.savefig("plots/publication/stab_iris_profiles.pdf", bbox_inches="tight")
 
 # %% make scatterplot of max convergence and Ts
 max_conv = {}
@@ -171,12 +171,13 @@ linreg = linregress(
     list(max_conv.values()),
 )
 
-fig, ax = plt.subplots(figsize=(4, 4))
+fig, ax = plt.subplots(figsize=(3, 3))
 for run in runs:
     ax.scatter(
         t_delta[run],
         max_conv[run],
         color=colors[run],
+        label=line_labels[run],
     )
 ax.plot(
     list(t_delta.values()),
@@ -184,11 +185,12 @@ ax.plot(
     color="grey",
 )
 ax.set_xticks(list(t_delta.values()))
+ax.set_yticks([0.375, 0.385, 0.395])
 ax.spines[["top", "right"]].set_visible(False)
 ax.set_xlabel(r"$\Delta T_s$ / K")
 ax.set_ylabel(r"$D_{\mathrm{max}}$ / day$^{-1}$")
-fig.tight_layout()
-fig.savefig("plots/iwp_drivers/max_conv.png", dpi=300, bbox_inches="tight")
+ax.legend(frameon=False)
+fig.savefig("plots/publication/max_conv.pdf", bbox_inches="tight")
 
 # %% make comparison plot to other studies
 delta_dr = {

@@ -1,7 +1,6 @@
 # %%
 import xarray as xr
 import matplotlib.pyplot as plt
-import numpy as np
 from src.calc_variables import (
     calc_heating_rates,
     calc_stability,
@@ -12,7 +11,7 @@ from scipy.signal import savgol_filter
 from src.read_data import load_definitions, load_random_datasets, load_vgrid
 
 # %%
-runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = load_definitions()
+runs, exp_name, colors, line_labels, sw_colors, lw_colors, net_colors, = load_definitions()
 linestyles = {
     "jed0011": "-",
     "jed0022": "-",
@@ -32,6 +31,11 @@ for run in runs:
         **{var: ds[var] for var in ds.variables if ("index",) == ds[var].dims}
     )
 
+datasets_rand = load_random_datasets()
+datasets_rand["jed2224"] = xr.open_dataset(
+    "/work/bm1183/m301049/icon_hcap_data/const_o3/production/random_sample/jed2224_randsample_processed_64.nc"
+)
+v_grid = load_vgrid()
 # %% add const ozone run
 runs = runs + ["jed2224"]
 datasets["jed2224"] = xr.open_dataset(
@@ -100,7 +104,7 @@ for run in ["jed0022", "jed0033"]:
     )
 
 # %% plot results in /m
-fig, axes = plt.subplots(1, 4, figsize=(14, 6), sharey=True)
+fig, axes = plt.subplots(1, 4, figsize=(10, 4), sharey=True)
 for run in runs:
     axes[0].plot(
         hrs[run]["net_hr"].where(masks_clearsky[run]).mean("index"),
@@ -148,40 +152,8 @@ fig.legend(
     ncol=4,
 )
 fig.tight_layout()
-fig.savefig("plots/publication/sup_stab_iris.pdf", bbox_inches="tight")
-# %% plot lapse rates 
-lapse_rates = {}
-for run in runs:
-    lapse_rates[run] = -1 * (
-        datasets[run]["ta"].diff("temp") / datasets[run]["zg"].diff("temp")
-    ).mean("index") * 1e3 
+fig.savefig("plots/publication/stab_iris_profiles_ozone.pdf", bbox_inches="tight")
 
-# %%
-fig, ax = plt.subplots(figsize=(4, 6))
-for run in runs:
-    ax.plot(
-        lapse_rates[run],
-        lapse_rates[run]["temp"],
-        label=line_labels[run],
-        color=colors[run],
-        linestyle=linestyles[run],
-    )
-
-ax.axvline(9.8, color='grey', linestyle='--', label=r'$\Gamma_{dry}$')
-ax.invert_yaxis()
-ax.set_xlabel("Lapse rate / K km$^{-1}$")
-ax.set_ylabel("Temperature / K")
-ax.spines[["top", "right"]].set_visible(False)
-ax.legend()
-fig.savefig("plots/publication/sup_lapse_rates.pdf", bbox_inches="tight")
-
-
-# %%
-datasets_rand = load_random_datasets()
-datasets_rand["jed2224"] = xr.open_dataset(
-    "/work/bm1183/m301049/icon_hcap_data/const_o3/production/random_sample/jed2224_randsample_processed_64.nc"
-)
-v_grid = load_vgrid()
 
 # %% plot temperature profiles in clearsky 
 masks_clearsky_rand = {}
@@ -193,7 +165,6 @@ for run in runs:
 t_profile = {}
 for run in runs:
     t_profile[run] = datasets_rand[run]["ta"].where(masks_clearsky_rand[run]).mean("index")
-# %%
 fig, ax = plt.subplots(figsize=(4, 6))
 for run in runs:
     ax.plot(
@@ -213,6 +184,6 @@ ax.legend(
     ncol=1,
     fontsize=10,
 )
-fig.savefig("plots/publication/sup_t_profile.pdf", bbox_inches="tight")
+fig.savefig("plots/publication/t_profile_clearsky.pdf", bbox_inches="tight")
 
 # %%

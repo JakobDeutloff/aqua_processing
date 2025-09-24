@@ -1,12 +1,10 @@
 # %%
-import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
 from src.read_data import load_random_datasets, load_definitions
-import pandas as pd
 
 # %% load CRE data
-runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
+runs, exp_name, colors, line_labels, sw_colors, lw_colors, net_colors = (
     load_definitions()
 )
 iwp_bins = np.logspace(-4, np.log10(40), 51)
@@ -69,7 +67,7 @@ for run in runs:
     )
 
 # %% plot mean time and SW down
-fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharex=True)
+fig, axes = plt.subplots(1, 3, figsize=(10, 3.5), sharex=True)
 
 for run in runs:
     sw_down_binned[run].sel(iwp_bins=slice(1e-4, 20)).plot(
@@ -101,7 +99,19 @@ fig.legend(
     bbox_to_anchor=(0.5, -0.1),
     frameon=False,
 )
-fig.savefig("plots/publication/S1.pdf", bbox_inches="tight")
-
+# add letters 
+for ax, letter in zip(axes, ["a", "b", "c"]):
+    ax.text(
+        0.03,
+        1,
+        letter,
+        transform=ax.transAxes,
+        fontsize=14,
+        fontweight="bold",
+        va="top",
+    )
+axes[2].invert_yaxis()
+fig.tight_layout()
+fig.savefig("plots/publication/sw_incoming.pdf", bbox_inches="tight")
 
 # %%

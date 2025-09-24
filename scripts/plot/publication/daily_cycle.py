@@ -5,7 +5,7 @@ import numpy as np
 from src.read_data import load_random_datasets, load_definitions
 
 # %% load CRE data
-runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
+runs, exp_name, colors, line_labels, sw_colors, lw_colors, net_colors = (
     load_definitions()
 )
 iwp_bins = np.logspace(-4, np.log10(40), 51)
@@ -56,7 +56,7 @@ for run in runs:
     ].values
 
 # %% plot 1 kg m^-2
-fig, ax1 = plt.subplots(figsize=(8, 4))
+fig, ax1 = plt.subplots(figsize=(5, 2.5))
 
 for run in runs:
     ax1.stairs(
@@ -85,7 +85,7 @@ ax2.tick_params(axis='y', labelcolor='grey')
 # add legend
 ax1.legend(frameon=False)
 
-fig.savefig("plots/publication/figure3_alt.pdf", bbox_inches="tight")
+fig.savefig("plots/publication/diurnal_cycle_1.pdf", bbox_inches="tight")
 
 # %% plot 5 kg m^-2
 fig, ax1 = plt.subplots(figsize=(8, 4))

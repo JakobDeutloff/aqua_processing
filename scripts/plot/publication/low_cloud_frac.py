@@ -5,7 +5,7 @@ import numpy as np
 from src.read_data import load_random_datasets, load_definitions
 
 # %%
-runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
+runs, exp_name, colors, line_labels, sw_colors, lw_colors, net_colors = (
     load_definitions()
 )
 iwp_bins = np.logspace(-4, np.log10(40), 51)
@@ -63,7 +63,18 @@ fig.legend(
     bbox_to_anchor=(0.5, -0.15),
     frameon=False,
 )
+# add letters 
+for ax, letter in zip(axes, ["a", "b"]):
+    ax.text(
+        0.03,
+        1,
+        letter,
+        transform=ax.transAxes,
+        fontsize=14,
+        fontweight="bold",
+        va="top",
+    )
 
-fig.savefig("plots/publication/sup_lc_frac.pdf", bbox_inches="tight")
+fig.savefig("plots/publication/lc_frac.pdf", bbox_inches="tight")
 
 # %%

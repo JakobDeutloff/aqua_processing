@@ -1,11 +1,10 @@
 # %%
 import matplotlib.pyplot as plt
 from src.read_data import load_random_datasets, load_vgrid, load_definitions
-from src.calc_variables import calculate_hc_temperature_bright
 import numpy as np
 
 # %% load data
-runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
+runs, exp_name, colors, line_labels, sw_colors, lw_colors, net_colors = (
     load_definitions()
 )
 datasets = load_random_datasets()
@@ -22,7 +21,7 @@ for run in runs:
     )
 
 # %% plot hc_temp binned by IWP
-fig, axes = plt.subplots(2, 1, figsize=(6, 4), sharex="col", height_ratios=[3, 1.5])
+fig, axes = plt.subplots(2, 1, figsize=(5, 3.5), sharex="col", height_ratios=[3, 1.5])
 
 for run in runs:
     binned_temp[run].plot(
@@ -75,7 +74,7 @@ for ax, letter in zip(axes, ["a", "b"]):
         va="top",
     )
 fig.savefig(
-    'plots/publication/figure2.pdf', bbox_inches="tight"
+    'plots/publication/hc_temp.pdf', bbox_inches="tight"
 )
 
 # %% calculate mean hc temperatures

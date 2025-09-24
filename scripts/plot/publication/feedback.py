@@ -7,21 +7,15 @@ from src.read_data import (
     load_random_datasets,
     load_definitions,
 )
-import matplotlib as mpl
 
 # mpl.use("Webagg")
 # %% load data
 temp_deltas = {"jed0022": 4, "jed0033": 2}
 iwp_bins = np.logspace(-4, np.log10(40), 51)
 iwp_points = (iwp_bins[:-1] + iwp_bins[1:]) / 2
-runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
+runs, exp_name, colors, line_labels, sw_colors, lw_colors, net_colors, = (
     load_definitions()
 )
-colors_fluxes = {
-    "lw": lw_color,
-    "sw": sw_color,
-    "net": net_color,
-}
 xpos = {
     "lw": 0,
     "sw": 1,
@@ -34,6 +28,11 @@ facecolors = {
 markers = {
     "jed0022": "o",
     "jed0033": "x",
+}
+colors_fluxes = {
+    'lw': lw_colors,
+    'sw': sw_colors,
+    'net': net_colors,
 }
 datasets = load_random_datasets()
 histograms = load_iwp_hists()
@@ -75,8 +74,12 @@ feedback_const_cre["jed0033"] = (
 feedback_const_cre["jed0022"] = (
     cre_const_cre_integrated["jed0022"] - cre_const_cre_integrated["jed0011"]
 ) / 4
-feedback_linear["jed0033"] = (feedback_const_cre["jed0033"] + feedback_const_iwp["jed0033"])
-feedback_linear["jed0022"] = (feedback_const_cre["jed0022"] + feedback_const_iwp["jed0022"])
+feedback_linear["jed0033"] = (
+    feedback_const_cre["jed0033"] + feedback_const_iwp["jed0033"]
+)
+feedback_linear["jed0022"] = (
+    feedback_const_cre["jed0022"] + feedback_const_iwp["jed0022"]
+)
 # %% partition IWP feedback into area and opacity feedback
 feedback_area = {}
 feedback_opacity = {}
@@ -95,7 +98,7 @@ for run in runs[1:]:
 
 # %% plot
 fig, axes = plt.subplots(
-    3, 3, figsize=(12, 10), width_ratios=[3, 1, 0.3], constrained_layout=True
+    3, 3, figsize=(10, 7), width_ratios=[3, 1, 0.3], constrained_layout=True
 )
 
 
@@ -110,8 +113,7 @@ for run in runs[1:]:
                 - const_iwp_folded["jed0011"][flux].values
             )
             / temp_deltas[run],
-            color=colors_fluxes[flux],
-            linestyle=linestyles[run],
+            color=colors_fluxes[flux][run],
         )
         axes[1, 0].plot(
             iwp_points,
@@ -120,35 +122,33 @@ for run in runs[1:]:
                 - const_cre_folded["jed0011"][flux].values
             )
             / temp_deltas[run],
-            color=colors_fluxes[flux],
-            linestyle=linestyles[run],
+            color=colors_fluxes[flux][run],
         )
         axes[2, 0].plot(
             iwp_points,
             (cre_folded[run][flux].values - cre_folded["jed0011"][flux].values)
             / temp_deltas[run],
-            color=colors_fluxes[flux],
-            linestyle=linestyles[run],
+            color=colors_fluxes[flux][run],
         )
         # Integrated Feedback
         axes[0, 1].scatter(
             xpos[flux],
             feedback_const_iwp[run][flux].values,
-            color=colors_fluxes[flux],
+            color=colors_fluxes[flux][run],
             marker=markers[run],
             facecolor=facecolors[run],
         )
         axes[1, 1].scatter(
             xpos[flux],
             feedback_const_cre[run][flux].values,
-            color=colors_fluxes[flux],
+            color=colors_fluxes[flux][run],
             marker=markers[run],
             facecolor=facecolors[run],
         )
         axes[2, 1].scatter(
             xpos[flux],
             feedback_linear[run][flux].values,
-            color=colors_fluxes[flux],
+            color=colors_fluxes[flux][run],
             marker=markers[run],
             facecolor=facecolors[run],
         )
@@ -157,14 +157,14 @@ for run in runs[1:]:
     axes[1, 2].scatter(
         0,
         feedback_area[run]["net"].values,
-        color="k",
+        color=colors_fluxes["net"][run],
         marker=markers[run],
         facecolor=facecolors[run],
     )
     axes[1, 2].scatter(
         1,
         feedback_opacity[run]["net"].values,
-        color="k",
+        color=colors_fluxes["net"][run],
         marker=markers[run],
         facecolor=facecolors[run],
     )
@@ -179,25 +179,22 @@ axes[1, 1].set_ylabel(r"$F_{\mathrm{IWP}}$ / W m$^{-2}$ K$^{-1}$")
 axes[2, 1].set_ylabel(r"$F$ / W m$^{-2}$ K$^{-1}$")
 
 # make legends
-handles = [
-    plt.Line2D([0], [0], color=colors_fluxes["lw"]),
-    plt.Line2D([0], [0], color=colors_fluxes["sw"]),
-    plt.Line2D([0], [0], color=colors_fluxes["net"]),
-    plt.Line2D([0], [0], color="grey", linestyle="-"),
-    plt.Line2D([0], [0], color="grey", linestyle="--"),
-]
 labels = [
-    "LW",
-    "SW",
-    "NET",
-    "+4 K",
-    "+2 K",
+    '+2 K LW', '+4 K LW', '+2 K SW', '+4 K SW', '+2 K Net', '+4 K Net'
+]
+handles = [
+    plt.Line2D([0], [0], color=lw_colors['jed0033']),
+    plt.Line2D([0], [0], color=lw_colors['jed0022']),
+    plt.Line2D([0], [0], color=sw_colors['jed0033']),
+    plt.Line2D([0], [0], color=sw_colors['jed0022']),
+    plt.Line2D([0], [0], color=net_colors['jed0033']),
+    plt.Line2D([0], [0], color=net_colors['jed0022']),
 ]
 
 fig.legend(
     handles,
     labels,
-    ncol=5,
+    ncol=3,
     bbox_to_anchor=(0.55, 0),
     frameon=False,
 )
@@ -265,14 +262,16 @@ for i, ax in enumerate(a):
     )
 
 
-fig.savefig("plots/publication/figure6.pdf", bbox_inches="tight")
+fig.savefig("plots/publication/feedback.pdf", bbox_inches="tight")
 plt.show()
-# %% non -linearity of feedback 
+# %% non -linearity of feedback
 feedback_nonlin = {}
 for run in runs[1:]:
     flux_feedback = {}
     for flux in ["lw", "sw", "net"]:
-        flux_feedback[flux] = (feedback_const_cre[run][flux] + feedback_const_iwp[run][flux]) - feedback[run][flux]
+        flux_feedback[flux] = (
+            feedback_const_cre[run][flux] + feedback_const_iwp[run][flux]
+        ) - feedback[run][flux]
     feedback_nonlin[run] = flux_feedback
 
 

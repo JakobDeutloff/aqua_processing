@@ -31,7 +31,7 @@ for run in runs:
 
 # %% plot histograms
 iwp_bins = np.logspace(-4, np.log10(40), 51)
-fig, axes = plt.subplots(1, 2, figsize=(10, 5), sharey=True, sharex=True)
+fig, axes = plt.subplots(1, 2, figsize=(10, 4), sharey=True, sharex=True)
 
 axes[0].stairs(
     hists_30['jed0033'] - hists_30['jed0011'],
@@ -81,8 +81,17 @@ fig.legend(
     handles, labels, loc='lower center', ncol=3, bbox_to_anchor=(0.5, -0.1),
     frameon=False
 )
+# add letters 
+for ax, letter in zip(axes, ["a", "b"]):
+    ax.text(
+        0.03,
+        1,
+        letter,
+        transform=ax.transAxes,
+        fontsize=14,
+        fontweight="bold",
+        va="top",
+    )
 fig.savefig('plots/publication/sup_conv.pdf', bbox_inches='tight')
-
-
 
 # %%

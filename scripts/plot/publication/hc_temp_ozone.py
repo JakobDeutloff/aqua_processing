@@ -3,10 +3,9 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
 from src.read_data import load_random_datasets, load_definitions, load_vgrid, load_cre, load_iwp_hists
-import pandas as pd
 
 # %% load CRE data
-runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
+runs, exp_name, colors, line_labels, sw_colors, lw_colors, net_colors = (
     load_definitions()
 )
 iwp_bins = np.logspace(-4, np.log10(40), 51)
@@ -42,7 +41,7 @@ for run in runs:
 
 # %% plot hc_temp binned by IWP
 
-fig, axes = plt.subplots(2, 1, figsize=(6, 4), sharex="col", height_ratios=[3, 1.5])
+fig, axes = plt.subplots(2, 1, figsize=(5, 3.5), sharex="col", height_ratios=[3, 1.5])
 
 for run in runs:
     temp_binned[run].plot(
@@ -87,7 +86,19 @@ fig.legend(
     frameon=False,
 )
 
-fig.savefig("plots/publication/sup_fat.pdf", bbox_inches="tight")
+# add letters 
+for ax, letter in zip(axes, ["a", "b"]):
+    ax.text(
+        0.03,
+        1,
+        letter,
+        transform=ax.transAxes,
+        fontsize=14,
+        fontweight="bold",
+        va="top",
+    )
+
+fig.savefig("plots/publication/hc_temp_ozone.pdf", bbox_inches="tight")
 # %% calculate lw feedback 
 lw_feedback = {}
 temp_deltas = {

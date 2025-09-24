@@ -10,21 +10,22 @@ from src.read_data import (
     load_random_datasets,
     load_definitions,
 )
-import matplotlib as mpl
+from matplotlib.patches import Patch
 
 # mpl.use("WebAgg")  # Use WebAgg backend for interactive plotting
 
 # %% load data
-runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
+runs, exp_name, colors, line_labels, sw_colors, lw_colors, net_colors = (
     load_definitions()
 )
+# %%
 datasets = load_random_datasets()
 histograms = load_iwp_hists()
 cre = load_cre()
 # %% read cloudsat and dardar
 cloudsat_raw = read_cloudsat("2008")
 dardar_raw = xr.open_dataset("/work/bm1183/m301049/dardar/dardar_iwp_2008.nc")
-mask = (dardar_raw['latitude'] > -20) & (dardar_raw['latitude'] < 20) 
+mask = (dardar_raw["latitude"] > -20) & (dardar_raw["latitude"] < 20)
 dardar_raw = dardar_raw.where(mask)
 
 # %% average over pairs of three entries in cloudsat to get to a resolution of 4.8 km
@@ -40,11 +41,16 @@ histograms["cloudsat"] = histograms["cloudsat"] / len(cloudsat["ice_water_path"]
 histograms["dardar"], _ = np.histogram(
     dardar["iwp"] / 1e3, bins=iwp_bins, density=False
 )
-histograms["dardar"] = histograms["dardar"] / np.isfinite(dardar['iwp']).sum().values
+histograms["dardar"] = histograms["dardar"] / np.isfinite(dardar["iwp"]).sum().values
 
 # %% plot
-fig = plt.figure(figsize=(12, 8))
+fig = plt.figure(figsize=(10, 6))
 gs = GridSpec(2, 2, figure=fig)
+linewidths = {
+    "jed0011": 1,
+    "jed0033": 1.75,
+    "jed0022": 2.5,
+}
 
 # Create the main 2x2 axes
 ax00 = fig.add_subplot(gs[0, 0])
@@ -63,13 +69,22 @@ ax10.axhline(0, color="k", linewidth=0.5)
 ax20.axhline(0, color="k", linewidth=0.5)
 for run in runs:
     ax00.plot(
-        cre[run]["iwp"], cre[run]["lw"], color=lw_color, linestyle=linestyles[run]
+        cre[run]["iwp"],
+        cre[run]["lw"],
+        color=lw_colors[run],
+        label=f"{line_labels[run]} LW",
     )
     ax00.plot(
-        cre[run]["iwp"], cre[run]["sw"], color=sw_color, linestyle=linestyles[run]
+        cre[run]["iwp"],
+        cre[run]["sw"],
+        color=sw_colors[run],
+        label=f"{line_labels[run]} SW",
     )
     ax00.plot(
-        cre[run]["iwp"], cre[run]["net"], color=net_color, linestyle=linestyles[run]
+        cre[run]["iwp"],
+        cre[run]["net"],
+        color=net_colors[run],
+        label=f"{line_labels[run]} Net",
     )
 ax00.set_yticks([-250, 0, 200])
 ax00.set_ylabel(r"$C(I)$ / W m$^{-2}$")
@@ -78,15 +93,13 @@ for run in runs[1:]:
     ax10.plot(
         cre[run]["iwp"],
         cre[run]["lw"] - cre[runs[0]]["lw"],
-        color=lw_color,
-        linestyle=linestyles[run],
+        color=lw_colors[run],
         label=line_labels[run],
     )
     ax20.plot(
         cre[run]["iwp"],
         cre[run]["sw"] - cre[runs[0]]["sw"],
-        color=sw_color,
-        linestyle=linestyles[run],
+        color=sw_colors[run],
         label=line_labels[run],
     )
 ax10.set_ylim([-1, 28])
@@ -98,10 +111,15 @@ ax20.set_yticks([0, 5, 20])
 
 # IWP histograms
 ax01.stairs(
-    histograms["cloudsat"], edges, color="k", linewidth=3, alpha=0.5, label="2C-ICE"
+    histograms["cloudsat"], edges, color="k", linewidth=4, alpha=0.5, label="2C-ICE"
 )
 ax01.stairs(
-    histograms['dardar'], edges, color='brown', linewidth=3, alpha=0.5, label='DarDar v2'
+    histograms["dardar"],
+    edges,
+    color="brown",
+    linewidth=4,
+    alpha=0.5,
+    label="DarDar v2",
 )
 for run in runs:
     ax01.stairs(
@@ -132,39 +150,74 @@ for ax in [ax00, ax10, ax01]:
 for ax in [ax20, ax11]:
     ax.set_xlabel("$I$ / kg m$^{-2}$")
 
-# legends
-handles = [
-    plt.Line2D([0], [0], color=lw_color),
-    plt.Line2D([0], [0], color=sw_color),
-    plt.Line2D([0], [0], color=net_color),
-    plt.Line2D([0], [0], color="grey", linestyle="-."),
-    plt.Line2D([0], [0], color="grey", linestyle="--"),
-    plt.Line2D([0], [0], color="grey", linestyle="-"),
+labels_1 = [
+    "Control LW",
+    "+2 K LW",
+    "+4 K LW",
+    "Control SW",
+    "+2 K SW",
+    "+4 K SW",
+    "Control Net",
+    "+2 K Net",
+    "+4 K Net",
 ]
-labels = ["LW", "SW", "Net", "Control", "+2 K", "+4 K"]
-ax00.legend(
-    handles=handles,
-    labels=labels,
-    loc="lower left",
+handles_1 = [
+    plt.Line2D([0], [0], color=lw_colors["jed0011"]),
+    plt.Line2D([0], [0], color=lw_colors["jed0033"]),
+    plt.Line2D([0], [0], color=lw_colors["jed0022"]),
+    plt.Line2D([0], [0], color=sw_colors["jed0011"]),
+    plt.Line2D([0], [0], color=sw_colors["jed0033"]),
+    plt.Line2D([0], [0], color=sw_colors["jed0022"]),
+    plt.Line2D([0], [0], color=net_colors["jed0011"]),
+    plt.Line2D([0], [0], color=net_colors["jed0033"]),
+    plt.Line2D([0], [0], color=net_colors["jed0022"]),
+]
+
+labels_2 = ["Control", "+2 K", "+4 K", "2C-ICE", "DarDar v2"]
+handles_2 = [
+    plt.Line2D([0], [0], color=colors["jed0011"]),
+    plt.Line2D([0], [0], color=colors["jed0033"]),
+    plt.Line2D([0], [0], color=colors["jed0022"]),
+    plt.Line2D([0], [0], color="k", linewidth=4, alpha=0.5),
+    plt.Line2D([0], [0], color="brown", linewidth=4, alpha=0.5),
+]
+
+legend_ax = fig.add_axes([0.08, -0.12, 0.8, 0.12])  # [left, bottom, width, height]
+legend_ax.axis("off")  # Hide the axes
+
+# Place both legends on the legend_ax
+legend1 = legend_ax.legend(
+    handles=handles_1,
+    labels=labels_1,
+    loc="upper left",
+    ncol=3,
     frameon=False,
     fontsize=10,
-    ncols=2
-    )
-
-ax01.legend(
-    loc="upper right",
-    frameon=False,
-    fontsize=10,
-    ncol=1,
-
+    handleheight=1.5,
+    handlelength=1.5,
 )
+legend2 = legend_ax.legend(
+    handles=handles_2,
+    labels=labels_2,
+    loc="upper right",
+    ncol=2,
+    frameon=False,
+    fontsize=10,
+    handleheight=1.5,
+    handlelength=1.5,
+)
+
+legend_ax.add_artist(legend1)  # Add the first legend back
+
+# Optionally, adjust the figure layout to make space for the legend axes
+fig.subplots_adjust(bottom=0.22)
 
 
 # add letters
 for ax, letter in zip(axes, ["a", "b", "c", "d", "e"]):
-    ax.text(0.03, 1, letter, transform=ax.transAxes, fontsize=14, fontweight="bold")
+    ax.text(0.03, 0.9, letter, transform=ax.transAxes, fontsize=14, fontweight="bold")
 
 fig.tight_layout()
-fig.savefig("plots/publication/figure1.pdf", bbox_inches="tight")
+fig.savefig("plots/publication/overview.pdf", bbox_inches="tight")
 plt.show()
 # %%

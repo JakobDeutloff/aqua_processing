@@ -1,5 +1,4 @@
 # %%
-import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
 from src.calc_variables import (
@@ -7,7 +6,7 @@ from src.calc_variables import (
 )
 from src.read_data import load_random_datasets, load_definitions
 # %%
-runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
+runs, exp_name, colors, line_labels, sw_colors, lw_colors, net_colors = (
     load_definitions()
 )
 datasets = load_random_datasets(version="temp")
@@ -59,7 +58,7 @@ for run in runs:
     cf_binned[run] = cf[run].groupby_bins(datasets[run]["iwp"], bins=iwp_bins).mean()
 
 # %% plot
-fig, axes  = plt.subplots(1, 3, figsize=(12, 4), sharex=True, sharey=True)
+fig, axes  = plt.subplots(1, 3, figsize=(10, 3.5), sharex=True, sharey=True)
 cmap = "seismic"
 net = axes[0].pcolormesh(
     iwp_points,
@@ -139,5 +138,5 @@ for i, ax in enumerate(axes):
         fontweight="bold",
     )
 
-fig.savefig("plots/publication/figure5.pdf", bbox_inches="tight", dpi=300)
+fig.savefig("plots/publication/heating_rates.pdf", bbox_inches="tight", dpi=300)
 # %%
