@@ -5,7 +5,7 @@ from src.calc_variables import calc_flux_conv_t
 from src.read_data import load_definitions
 
 # %%
-runs, exp_name, colors, line_labels, sw_colors, lw_colors, net_colors = load_definitions()
+runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = load_definitions()
 datasets = {}
 datasets
 for run in runs:

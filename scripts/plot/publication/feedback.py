@@ -13,7 +13,7 @@ from src.read_data import (
 temp_deltas = {"jed0022": 4, "jed0033": 2}
 iwp_bins = np.logspace(-4, np.log10(40), 51)
 iwp_points = (iwp_bins[:-1] + iwp_bins[1:]) / 2
-runs, exp_name, colors, line_labels, sw_colors, lw_colors, net_colors, = (
+runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
     load_definitions()
 )
 xpos = {
@@ -30,9 +30,9 @@ markers = {
     "jed0033": "x",
 }
 colors_fluxes = {
-    'lw': lw_colors,
-    'sw': sw_colors,
-    'net': net_colors,
+    'lw': lw_color,
+    'sw': sw_color,
+    'net': net_color,
 }
 datasets = load_random_datasets()
 histograms = load_iwp_hists()
@@ -113,7 +113,8 @@ for run in runs[1:]:
                 - const_iwp_folded["jed0011"][flux].values
             )
             / temp_deltas[run],
-            color=colors_fluxes[flux][run],
+            color=colors_fluxes[flux],
+            linestyle=linestyles[run],
         )
         axes[1, 0].plot(
             iwp_points,
@@ -122,33 +123,35 @@ for run in runs[1:]:
                 - const_cre_folded["jed0011"][flux].values
             )
             / temp_deltas[run],
-            color=colors_fluxes[flux][run],
+            color=colors_fluxes[flux],
+            linestyle=linestyles[run],
         )
         axes[2, 0].plot(
             iwp_points,
             (cre_folded[run][flux].values - cre_folded["jed0011"][flux].values)
             / temp_deltas[run],
-            color=colors_fluxes[flux][run],
+            color=colors_fluxes[flux],
+            linestyle=linestyles[run],
         )
         # Integrated Feedback
         axes[0, 1].scatter(
             xpos[flux],
             feedback_const_iwp[run][flux].values,
-            color=colors_fluxes[flux][run],
+            color=colors_fluxes[flux],
             marker=markers[run],
             facecolor=facecolors[run],
         )
         axes[1, 1].scatter(
             xpos[flux],
             feedback_const_cre[run][flux].values,
-            color=colors_fluxes[flux][run],
+            color=colors_fluxes[flux],
             marker=markers[run],
             facecolor=facecolors[run],
         )
         axes[2, 1].scatter(
             xpos[flux],
             feedback_linear[run][flux].values,
-            color=colors_fluxes[flux][run],
+            color=colors_fluxes[flux],
             marker=markers[run],
             facecolor=facecolors[run],
         )
@@ -157,14 +160,14 @@ for run in runs[1:]:
     axes[1, 2].scatter(
         0,
         feedback_area[run]["net"].values,
-        color=colors_fluxes["net"][run],
+        color=colors_fluxes["net"],
         marker=markers[run],
         facecolor=facecolors[run],
     )
     axes[1, 2].scatter(
         1,
         feedback_opacity[run]["net"].values,
-        color=colors_fluxes["net"][run],
+        color=colors_fluxes["net"],
         marker=markers[run],
         facecolor=facecolors[run],
     )
@@ -180,22 +183,21 @@ axes[2, 1].set_ylabel(r"$F$ / W m$^{-2}$ K$^{-1}$")
 
 # make legends
 labels = [
-    '+2 K LW', '+4 K LW', '+2 K SW', '+4 K SW', '+2 K Net', '+4 K Net'
+    'LW', 'SW', 'Net', "+2 K", "+4 K"
 ]
 handles = [
-    plt.Line2D([0], [0], color=lw_colors['jed0033']),
-    plt.Line2D([0], [0], color=lw_colors['jed0022']),
-    plt.Line2D([0], [0], color=sw_colors['jed0033']),
-    plt.Line2D([0], [0], color=sw_colors['jed0022']),
-    plt.Line2D([0], [0], color=net_colors['jed0033']),
-    plt.Line2D([0], [0], color=net_colors['jed0022']),
+    plt.Line2D([0], [0], color=lw_color),
+    plt.Line2D([0], [0], color=sw_color),
+    plt.Line2D([0], [0], color=net_color),
+    plt.Line2D([0], [0], color="grey", linestyle=linestyles["jed0033"]),
+    plt.Line2D([0], [0], color="grey", linestyle=linestyles["jed0022"]),
 ]
 
 fig.legend(
     handles,
     labels,
-    ncol=3,
-    bbox_to_anchor=(0.55, 0),
+    ncol=5,
+    bbox_to_anchor=(0.6, 0),
     frameon=False,
 )
 

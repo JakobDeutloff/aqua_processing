@@ -4,7 +4,7 @@ from src.read_data import load_random_datasets, load_vgrid, load_definitions
 import numpy as np
 
 # %% load data
-runs, exp_name, colors, line_labels, sw_colors, lw_colors, net_colors = (
+runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
     load_definitions()
 )
 datasets = load_random_datasets()

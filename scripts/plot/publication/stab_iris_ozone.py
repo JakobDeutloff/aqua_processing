@@ -11,7 +11,7 @@ from scipy.signal import savgol_filter
 from src.read_data import load_definitions, load_random_datasets, load_vgrid
 
 # %%
-runs, exp_name, colors, line_labels, sw_colors, lw_colors, net_colors, = load_definitions()
+runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = load_definitions()
 linestyles = {
     "jed0011": "-",
     "jed0022": "-",

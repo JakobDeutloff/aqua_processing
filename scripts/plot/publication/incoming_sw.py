@@ -4,7 +4,7 @@ import numpy as np
 from src.read_data import load_random_datasets, load_definitions
 
 # %% load CRE data
-runs, exp_name, colors, line_labels, sw_colors, lw_colors, net_colors = (
+runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
     load_definitions()
 )
 iwp_bins = np.logspace(-4, np.log10(40), 51)
@@ -15,26 +15,6 @@ datasets = load_random_datasets()
 for run in runs:
     sw_down = datasets[run]["rsdt"].where(datasets[run]["iwp"] > 1).mean()
     print(f"{run} {sw_down.values}")
-
-# %% plot median local time
-fig, ax = plt.subplots(figsize=(8, 5))
-for run in runs:
-    median_time = (
-        datasets[run]["time_local"]
-        .groupby_bins(datasets[run]["iwp"], iwp_bins)
-        .median()
-    )
-    ax.plot(
-        iwp_points,
-        median_time,
-        label=exp_name[run],
-        color=colors[run],
-    )
-
-ax.set_ylabel("Local Time / h")
-ax.set_xlabel("$I$ / $kg m^{-2}$")
-ax.set_xscale("log")
-
 
 # %% bin quantities
 time_binned = {}

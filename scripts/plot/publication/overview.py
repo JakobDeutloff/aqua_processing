@@ -10,15 +10,13 @@ from src.read_data import (
     load_random_datasets,
     load_definitions,
 )
-from matplotlib.patches import Patch
 
 # mpl.use("WebAgg")  # Use WebAgg backend for interactive plotting
 
 # %% load data
-runs, exp_name, colors, line_labels, sw_colors, lw_colors, net_colors = (
+runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
     load_definitions()
 )
-# %%
 datasets = load_random_datasets()
 histograms = load_iwp_hists()
 cre = load_cre()
@@ -46,11 +44,6 @@ histograms["dardar"] = histograms["dardar"] / np.isfinite(dardar["iwp"]).sum().v
 # %% plot
 fig = plt.figure(figsize=(10, 6))
 gs = GridSpec(2, 2, figure=fig)
-linewidths = {
-    "jed0011": 1,
-    "jed0033": 1.75,
-    "jed0022": 2.5,
-}
 
 # Create the main 2x2 axes
 ax00 = fig.add_subplot(gs[0, 0])
@@ -71,20 +64,20 @@ for run in runs:
     ax00.plot(
         cre[run]["iwp"],
         cre[run]["lw"],
-        color=lw_colors[run],
-        label=f"{line_labels[run]} LW",
+        color=lw_color,
+        linestyle=linestyles[run],
     )
     ax00.plot(
         cre[run]["iwp"],
         cre[run]["sw"],
-        color=sw_colors[run],
-        label=f"{line_labels[run]} SW",
+        color=sw_color,
+        linestyle=linestyles[run],
     )
     ax00.plot(
         cre[run]["iwp"],
         cre[run]["net"],
-        color=net_colors[run],
-        label=f"{line_labels[run]} Net",
+        color=net_color,
+        linestyle=linestyles[run],
     )
 ax00.set_yticks([-250, 0, 200])
 ax00.set_ylabel(r"$C(I)$ / W m$^{-2}$")
@@ -93,14 +86,14 @@ for run in runs[1:]:
     ax10.plot(
         cre[run]["iwp"],
         cre[run]["lw"] - cre[runs[0]]["lw"],
-        color=lw_colors[run],
-        label=line_labels[run],
+        color=lw_color,
+        linestyle=linestyles[run],
     )
     ax20.plot(
         cre[run]["iwp"],
         cre[run]["sw"] - cre[runs[0]]["sw"],
-        color=sw_colors[run],
-        label=line_labels[run],
+        color=sw_color,
+        linestyle=linestyles[run],
     )
 ax10.set_ylim([-1, 28])
 ax10.set_ylabel(r"$\Delta C_{\mathrm{LW}}(I)$ / W m$^{-2}$")
@@ -151,26 +144,15 @@ for ax in [ax20, ax11]:
     ax.set_xlabel("$I$ / kg m$^{-2}$")
 
 labels_1 = [
-    "Control LW",
-    "+2 K LW",
-    "+4 K LW",
-    "Control SW",
-    "+2 K SW",
-    "+4 K SW",
-    "Control Net",
-    "+2 K Net",
-    "+4 K Net",
+    'LW', 'SW', 'Net', 'Control', '+2 K', '+4 K'
 ]
 handles_1 = [
-    plt.Line2D([0], [0], color=lw_colors["jed0011"]),
-    plt.Line2D([0], [0], color=lw_colors["jed0033"]),
-    plt.Line2D([0], [0], color=lw_colors["jed0022"]),
-    plt.Line2D([0], [0], color=sw_colors["jed0011"]),
-    plt.Line2D([0], [0], color=sw_colors["jed0033"]),
-    plt.Line2D([0], [0], color=sw_colors["jed0022"]),
-    plt.Line2D([0], [0], color=net_colors["jed0011"]),
-    plt.Line2D([0], [0], color=net_colors["jed0033"]),
-    plt.Line2D([0], [0], color=net_colors["jed0022"]),
+    plt.Line2D([0], [0], color=lw_color),
+    plt.Line2D([0], [0], color=sw_color),
+    plt.Line2D([0], [0], color=net_color),
+    plt.Line2D([0], [0], color='grey', linestyle=linestyles["jed0011"]),
+    plt.Line2D([0], [0], color='grey', linestyle=linestyles["jed0033"]),
+    plt.Line2D([0], [0], color='grey', linestyle=linestyles["jed0022"]),
 ]
 
 labels_2 = ["Control", "+2 K", "+4 K", "2C-ICE", "DarDar v2"]
@@ -182,7 +164,7 @@ handles_2 = [
     plt.Line2D([0], [0], color="brown", linewidth=4, alpha=0.5),
 ]
 
-legend_ax = fig.add_axes([0.08, -0.12, 0.8, 0.12])  # [left, bottom, width, height]
+legend_ax = fig.add_axes([0.2, -0.12, 0.72, 0.12])  # [left, bottom, width, height]
 legend_ax.axis("off")  # Hide the axes
 
 # Place both legends on the legend_ax
@@ -190,11 +172,8 @@ legend1 = legend_ax.legend(
     handles=handles_1,
     labels=labels_1,
     loc="upper left",
-    ncol=3,
+    ncol=2,
     frameon=False,
-    fontsize=10,
-    handleheight=1.5,
-    handlelength=1.5,
 )
 legend2 = legend_ax.legend(
     handles=handles_2,
@@ -202,9 +181,6 @@ legend2 = legend_ax.legend(
     loc="upper right",
     ncol=2,
     frameon=False,
-    fontsize=10,
-    handleheight=1.5,
-    handlelength=1.5,
 )
 
 legend_ax.add_artist(legend1)  # Add the first legend back
@@ -216,7 +192,6 @@ fig.subplots_adjust(bottom=0.22)
 # add letters
 for ax, letter in zip(axes, ["a", "b", "c", "d", "e"]):
     ax.text(0.03, 0.9, letter, transform=ax.transAxes, fontsize=14, fontweight="bold")
-
 fig.tight_layout()
 fig.savefig("plots/publication/overview.pdf", bbox_inches="tight")
 plt.show()

@@ -14,7 +14,7 @@ from src.read_data import load_random_datasets, load_definitions
 
 
 # %%
-runs, exp_name, colors, line_labels, sw_colors, lw_colors, net_colors = (
+runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
     load_definitions()
 )
 datasets = load_random_datasets(version="temp")
@@ -233,4 +233,3 @@ ax.set_yticks(yticks)
 ax.spines[["top", "right", "bottom"]].set_visible(False)
 ax.set_ylabel(r"$\Delta D_{\mathrm{max}} /\Delta T_s$ / day$^{-1}$ K$^{-1}$")
 
-# %% plot real clear sky convergence

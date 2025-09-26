@@ -5,7 +5,7 @@ import numpy as np
 from src.read_data import load_random_datasets, load_definitions
 
 # %% load CRE data
-runs, exp_name, colors, line_labels, sw_colors, lw_colors, net_colors = (
+runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
     load_definitions()
 )
 iwp_bins = np.logspace(-4, np.log10(40), 51)

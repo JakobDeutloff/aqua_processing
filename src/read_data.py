@@ -304,13 +304,18 @@ def load_definitions():
 
     runs = ["jed0011", "jed0033", "jed0022"]
     exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
-    colors = {"jed0011": "#113E00", "jed0022": "#00FC08", "jed0033": "#099D04"}
-    sw_colors = {'jed0011': "#003042", 'jed0022': '#00B5F7', 'jed0033': '#00739D'}
-    lw_colors = {'jed0011': '#380016', 'jed0022': '#F70063', 'jed0033': '#98003D'}
-    net_colors = {'jed0011': '#000000', 'jed0022': '#989797', 'jed0033': '#4C4C4C'}
+    colors = {"jed0011": "#462d7b", "jed0022": "#c1df24", "jed0033": "#1f948a"}
+    linestyles = {
+        "jed0011": "-.",
+        "jed0022": "-",
+        "jed0033": "--",
+    }
+    sw_color = "#125fd3"
+    lw_color = "#bd154a"
+    net_color = "#000000"
     labels = {
         "jed0011": "Control",
         "jed0022": "+4 K",
         "jed0033": "+2 K",
     }
-    return runs, exp_name, colors, labels, sw_colors, lw_colors, net_colors
+    return runs, exp_name, colors, labels, sw_color, lw_color, net_color, linestyles
