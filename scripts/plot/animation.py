@@ -19,8 +19,8 @@ ds = ds.pipe(merge_grid)
 
 
 # %% make colormap that goes from steelblue to white without alpha channel
-background = (0, 0, 0)
-white_cmap = LinearSegmentedColormap.from_list("white", [background, "#FF7FBD"])
+background = (1, 1, 1)
+white_cmap = LinearSegmentedColormap.from_list("white", [background, "#05034E"])
 
 # %% setup figure
 fig_height_in = 14
@@ -83,7 +83,7 @@ with ProcessPoolExecutor(max_workers=64) as executor:
     list(tqdm(executor.map(save_frame_png, range(len(ds.time))), total=len(ds.time)))
 
 # %%
-anim_path = "/work/bm1183/m301049/animation/animation_pink_5.mp4"
+anim_path = "/work/bm1183/m301049/animation/animation_white_blue.mp4"
 if os.path.exists(anim_path):
     os.remove(anim_path)
 

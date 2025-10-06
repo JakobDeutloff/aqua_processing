@@ -12,32 +12,43 @@ from functools import partial
 
 # %% load data
 ds = xr.open_dataset(
-    "/work/bm1183/m301049/icon_hcap_data/control/production/latlon/prw_latlon.nc"
+    "/work/bm1183/m301049/icon_hcap_data/plus2K/production/latlon/atm2d_latlon.nc"
 )
-ds = ds.sel(time=(ds.time.dt.minute == 0) & (ds.time.dt.hour == 0)).sel(
-    lon=slice(0, 100), lat=slice(-50, 50)
-)
-
+ds = ds.sel(lon=slice(0, 80))
 # %% check histogram
 
 hists = []
+hists_precip =[]
 intervals = [5, 10, 15, 20, 25, 30, 35, 40]
 for interval in intervals:
+    sel = ds.isel(time=slice(0, 20)).sel(lat=slice(-interval, interval))
     hist, edges = np.histogram(
-        ds["prw"].isel(time=slice(0, 20)).sel(lat=slice(-interval, interval)),
+        sel['prw'],
         density=False,
         bins=np.arange(0, 60, 1),
     )
     hists.append(hist)
+    
+    hist_precip, edges = np.histogram(
+        sel['prw'].where(sel["pr"]>0),
+        density=False,
+        bins=np.arange(0, 60, 1),
+    )
+    hists_precip.append(hist_precip)
 
 # %%
-fig, ax = plt.subplots(figsize=(8, 5))
-for hist, interval in zip(hists, intervals):
-    ax.plot(edges[:-1], hist, label=f"-{interval}° to {interval}°")
-ax.spines[["top", "right"]].set_visible(False)
-ax.legend(title="Latitude band")
-ax.set_xlabel("Water vapor path / mm")
-ax.set_ylabel("Counts")
+fig, axes = plt.subplots(2, 1, figsize=(8, 8))
+for hist, hist_precip, interval in zip(hists, hists_precip, intervals):
+    axes[0].plot(edges[:-1], hist, label=f"-{interval}° to {interval}°")
+    axes[1].plot(edges[:-1], hist_precip, label=f"-{interval}° to {interval}°")
+
+for ax in axes:
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.set_ylabel("Counts")
+axes[1].set_xlabel("Water Vapor Path / mm$")
+handles, labels = axes[0].get_legend_handles_labels()
+fig.legend(handles, labels, title="Latitude band", bbox_to_anchor=(1.0, 0.5), loc='center left')
+
 fig.savefig("plots/moist_layers/prw_histograms_sec.png", dpi=300, bbox_inches="tight")
 
 # %% calculate contourlength 30 mm

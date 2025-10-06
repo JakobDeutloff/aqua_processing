@@ -392,7 +392,7 @@ def calc_stability(ta, zg, z_var="temp"):
     g = -9.81
     cp = 1004
     stab = (g / cp) - (ta.diff(z_var) / zg.diff(z_var).values)
-    stab["temp"] = (ta["temp"][1:].values + ta["temp"][:-1].values) / 2
+    stab[z_var] = (ta[z_var][1:].values + ta[z_var][:-1].values) / 2
     stab.attrs = {
         "units": "K m^-1",
         "long_name": "Stability",
@@ -412,9 +412,9 @@ def calc_w_sub(net_hr, stab):
 def calc_conv(wsub, zg, z_var="temp"):
     
     conv = -wsub.diff(z_var) / (
-        zg.interp(temp=wsub["temp"], method="linear").diff(z_var).values
+        zg.interp(height=wsub[z_var], method="linear").diff(z_var).values
     )
-    conv["temp"] = (wsub["temp"][1:].values + wsub["temp"][:-1].values) / 2
+    conv[z_var] = (wsub[z_var][1:].values + wsub[z_var][:-1].values) / 2
     conv.attrs = {
         "units": "day^-1",
         "long_name": "Convergence",

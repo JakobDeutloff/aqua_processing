@@ -9,6 +9,7 @@ from src.calc_variables import (
     calc_conv,
 )
 from scipy.stats import linregress
+from scipy.signal import savgol_filter
 
 # %% load data
 runs = ["jed0011", "jed0022", "jed0033"]
@@ -51,22 +52,42 @@ for run in runs:
         - datasets[run]["rsu"].where(mask_trop[run]),
         datasets[run]["rld"].where(mask_trop[run])
         - datasets[run]["rlu"].where(mask_trop[run]),
-        vgrid,
+        vgrid['zg'],
+        'height',
     )
     hrs_jev[run] = hrs_jev[run].assign(
-        stab=calc_stability(datasets[run]["ta"].where(mask_trop[run]), vgrid=vgrid)
+        stab=calc_stability(datasets[run]["ta"].where(mask_trop[run]), zg=vgrid['zg'], z_var='height')
     )
 #  calcualte sub and conv from mean values
 sub_mean = {}
 conv_mean = {}
 for run in runs:
     mean_hrs = hrs_jev[run].where(masks_clearsky[run]).mean("index")
+
     sub_mean[run] = calc_w_sub(mean_hrs["net_hr"], mean_hrs["stab"])
-    conv_mean[run] = calc_conv(sub_mean[run], vgrid)
+    sub_mean[run] = xr.DataArray(
+        data=savgol_filter(sub_mean[run], window_length=11, polyorder=3),
+        coords=sub_mean[run].coords,
+        dims=sub_mean[run].dims,
+    )
+    conv_mean[run] = calc_conv(sub_mean[run], vgrid['zg'], z_var='height')
+
+# %% plot mean subsidence profile
+fig, ax = plt.subplots(figsize=(4, 6))
+
+ax.plot(
+    sub_mean["jed0011"],
+    vgrid["zg"].sel(height=sub_mean["jed0011"]["height"], method='nearest') / 1e3,
+    color='k',
+)
+ax.set_xlabel("Subsidence / m day$^{-1}$")
+ax.set_ylabel("Height / km")
+ax.spines[["top", "right"]].set_visible(False)
+
 
 
 # %% plot results jevanjee
-height_range = slice(6e3, 16e3)
+height_range = slice(10, 16e3)
 fig, axes = plt.subplots(1, 4, figsize=(14, 6), sharey=True)
 mask_hrs = (
     vgrid["zghalf"].sel(height_2=hrs_jev["jed0011"]["height"]) >= height_range.start
