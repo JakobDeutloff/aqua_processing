@@ -428,4 +428,103 @@ fig.legend(handles, labels, bbox_to_anchor=[0.62, 0], frameon=True, ncols=2)
 fig.savefig(f"plots/feedback/raw/feedback.png", dpi=300, bbox_inches="tight")
 
 
+# %% plot integrated CRE and feedback for talk
+fig, axes = plt.subplots(1, 3, figsize=(9, 4), sharey=True, width_ratios=[1, 1, 1])
+
+
+axes[2].scatter(0, feedback["jed0033"]["lw"].values, color=lw_color, marker="x")
+axes[2].scatter(1, feedback["jed0033"]["sw"].values, color=sw_color, marker="x")
+axes[2].scatter(2, feedback["jed0033"]["net"].values, color=net_color, marker="x")
+
+axes[2].scatter(
+    0, feedback["jed0022"]["lw"].values, color=lw_color, marker="o", facecolors="none"
+)
+axes[2].scatter(
+    1, feedback["jed0022"]["sw"].values, color=sw_color, marker="o", facecolors="none"
+)
+axes[2].scatter(
+    2, feedback["jed0022"]["net"].values, color=net_color, marker="o", facecolors="none"
+)
+axes[2].set_title("Total")
+
+axes[0].scatter(0, feedback_const_iwp["jed0033"]["lw"].values, color=lw_color, marker="x")
+axes[0].scatter(1, feedback_const_iwp["jed0033"]["sw"].values, color=sw_color, marker="x")
+axes[0].scatter(2, feedback_const_iwp["jed0033"]["net"].values, color=net_color, marker="x")
+
+axes[0].scatter(
+    0,
+    feedback_const_iwp["jed0022"]["lw"].values,
+    color=lw_color,
+    marker="o",
+    facecolors="none",
+)
+axes[0].scatter(
+    1,
+    feedback_const_iwp["jed0022"]["sw"].values,
+    color=sw_color,
+    marker="o",
+    facecolors="none",
+)
+axes[0].scatter(
+    2,
+    feedback_const_iwp["jed0022"]["net"].values,
+    color=net_color,
+    marker="o",
+    facecolors="none",
+)
+axes[0].set_title("CRE Change")
+
+axes[1].scatter(0, feedback_const_cre["jed0033"]["lw"].values, color=lw_color, marker="x")
+axes[1].scatter(1, feedback_const_cre["jed0033"]["sw"].values, color=sw_color, marker="x")
+axes[1].scatter(2, feedback_const_cre["jed0033"]["net"].values, color=net_color, marker="x")
+
+axes[1].scatter(
+    0,
+    feedback_const_cre["jed0022"]["lw"].values,
+    color=lw_color,
+    marker="o",
+    facecolors="none",
+)
+axes[1].scatter(
+    1,
+    feedback_const_cre["jed0022"]["sw"].values,
+    color=sw_color,
+    marker="o",
+    facecolors="none",
+)
+axes[1].scatter(
+    2,
+    feedback_const_cre["jed0022"]["net"].values,
+    color=net_color,
+    marker="o",
+    facecolors="none",
+)
+
+axes[1].set_title("IWP Change")
+
+for ax in axes[:-1]:
+    ax.set_xticks([0, 1, 2])
+    ax.set_yticks([-0.3, 0, 0.3, 0.6])
+    ax.set_xticklabels(["LW", "SW", "Net"])
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.axhline(0, color="grey", linestyle="--", linewidth=0.8)
+
+axes[2].set_xticks([0, 1, 2])
+axes[2].set_xticklabels(["LW", "SW", "Net"])
+axes[2].spines[["top", "right"]].set_visible(False)
+axes[2].axhline(0, color="grey", linestyle="--", linewidth=0.8)
+
+
+axes[2].set_ylabel("$F$ / W m$^{-2}$ K$^{-1}$")
+axes[0].set_ylabel("$F_{\mathrm{CRE}}$ / W m$^{-2}$ K$^{-1}$")
+axes[1].set_ylabel("$F_{\mathrm{IWP}}$ / W m$^{-2}$ K$^{-1}$")
+
+labels = ["+2K", "+4K"]
+handles = [
+    plt.Line2D([0], [0], color="grey", marker="x", linestyle="none"),
+    plt.Line2D([0], [0], color="grey", marker="o", linestyle="none"),
+]
+fig.legend(handles, labels, bbox_to_anchor=[0.62, 0], frameon=True, ncols=2)
+fig.savefig(f"plots/feedback/raw/feedback_talk.png", dpi=300, bbox_inches="tight")
+
 # %%

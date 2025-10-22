@@ -5,6 +5,8 @@ from src.calc_variables import (
     calc_heating_rates_t,
 )
 from src.read_data import load_random_datasets, load_definitions
+import xarray as xr
+
 # %%
 runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
     load_definitions()
@@ -17,7 +19,7 @@ for run in runs:
     datasets[run] = datasets[run].assign(
         **{var: ds[var] for var in ds.variables if ("index",) == ds[var].dims}
     )
-# %% calculate heating rates and cf 
+# %% calculate heating rates and cf
 hrs = {}
 hrs_binned_net = {}
 hrs_binned_sw = {}
@@ -58,42 +60,42 @@ for run in runs:
     cf_binned[run] = cf[run].groupby_bins(datasets[run]["iwp"], bins=iwp_bins).mean()
 
 # %% plot
-fig, axes  = plt.subplots(1, 3, figsize=(10, 3.5), sharex=True, sharey=True)
+fig, axes = plt.subplots(1, 3, figsize=(10, 3.5), sharex=True, sharey=True)
 cmap = "seismic"
 net = axes[0].pcolormesh(
     iwp_points,
-    hrs_binned_net['jed0011']['temp'],
-    hrs_binned_net['jed0011'].T,
+    hrs_binned_net["jed0011"]["temp"],
+    hrs_binned_net["jed0011"].T,
     cmap=cmap,
     vmin=-4,
     vmax=4,
-    rasterized=True
+    rasterized=True,
 )
 
 diff = axes[1].pcolormesh(
     iwp_points,
-    hrs_binned_net['jed0033']['temp'],
-    (hrs_binned_net['jed0033'] - hrs_binned_net['jed0011']).T,
+    hrs_binned_net["jed0033"]["temp"],
+    (hrs_binned_net["jed0033"] - hrs_binned_net["jed0011"]).T,
     cmap=cmap,
     vmin=-1.5,
     vmax=1.5,
-    rasterized=True
+    rasterized=True,
 )
 
 axes[2].pcolormesh(
     iwp_points,
-    hrs_binned_net['jed0022']['temp'],
-    (hrs_binned_net['jed0022'] - hrs_binned_net['jed0011']).T,
+    hrs_binned_net["jed0022"]["temp"],
+    (hrs_binned_net["jed0022"] - hrs_binned_net["jed0011"]).T,
     cmap=cmap,
     vmin=-1.5,
     vmax=1.5,
-    rasterized=True
+    rasterized=True,
 )
 
 for i, run in enumerate(runs):
     contour = axes[i].contour(
         iwp_points,
-        datasets[run]['temp'],
+        datasets[run]["temp"],
         cf_binned[run].T,
         colors="k",
         levels=[0.1, 0.3, 0.5, 0.7, 0.9],
@@ -114,8 +116,8 @@ axes[2].set_title("+4 K - Control")
 
 cbar_height = 0.03
 cbar_bottom = -0.09  # vertical position
-cbar_left1 = 0.13   # left for first colorbar
-cbar_left2 = 0.4   # left for second colorbar
+cbar_left1 = 0.13  # left for first colorbar
+cbar_left2 = 0.4  # left for second colorbar
 
 cax1 = fig.add_axes([cbar_left1, cbar_bottom, 0.22, cbar_height])
 cax2 = fig.add_axes([cbar_left2, cbar_bottom, 0.5, cbar_height])
@@ -139,4 +141,54 @@ for i, ax in enumerate(axes):
     )
 
 fig.savefig("plots/publication/heating_rates.pdf", bbox_inches="tight", dpi=300)
+# %% save data
+hr_net = xr.Dataset(
+    {
+        run: xr.DataArray(
+            hrs_binned_net[run].values,
+            coords={"iwp_points": iwp_points, "temp": hrs_binned_net[run]["temp"]},
+            dims=["iwp_points", "temp"],
+        )
+        for run in runs
+    }
+)
+
+hr_sw = xr.Dataset(
+    {
+        run: xr.DataArray(
+            hrs_binned_sw[run].values,
+            coords={"iwp_points": iwp_points, "temp": hrs_binned_sw[run]["temp"]},
+            dims=["iwp_points", "temp"],
+        )
+        for run in runs
+    }
+)
+
+hr_lw = xr.Dataset(
+    {
+        run: xr.DataArray(
+            hrs_binned_lw[run].values,
+            coords={"iwp_points": iwp_points, "temp": hrs_binned_lw[run]["temp"]},
+            dims=["iwp_points", "temp"],
+        )
+        for run in runs
+    }
+)
+
+cf = xr.Dataset(
+    {
+        run: xr.DataArray(
+            cf_binned[run].values,
+            coords={"iwp_points": iwp_points, "temp": cf_binned[run]["temp"]},
+            dims=["iwp_points", "temp"],
+        )
+        for run in runs
+    }
+)
+
+hr_net.to_netcdf("/work/bm1183/m301049/icon_hcap_data/publication/heating_rates/hr_net.nc")
+hr_sw.to_netcdf("/work/bm1183/m301049/icon_hcap_data/publication/heating_rates/hr_sw.nc")
+hr_lw.to_netcdf("/work/bm1183/m301049/icon_hcap_data/publication/heating_rates/hr_lw.nc")
+cf.to_netcdf("/work/bm1183/m301049/icon_hcap_data/publication/heating_rates/cf.nc")
+
 # %%

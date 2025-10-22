@@ -98,4 +98,10 @@ for ax, letter in zip(axes, ["a", "b", "c"]):
     )
 fig.tight_layout()
 fig.savefig("plots/publication/flux_conv.pdf", bbox_inches="tight")
+# %% save data 
+for run in runs:
+    mean_hr[run].to_netcdf(f'/work/bm1183/m301049/icon_hcap_data/publication/flux_conv/{run}_heating_rate.nc')
+    f_conv[run].to_netcdf(f'/work/bm1183/m301049/icon_hcap_data/publication/flux_conv/{run}_flux_divergence.nc')
+    mean_rho[run].to_netcdf(f'/work/bm1183/m301049/icon_hcap_data/publication/flux_conv/{run}_air_density.nc')
+
 # %%

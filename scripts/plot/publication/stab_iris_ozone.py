@@ -160,7 +160,7 @@ masks_clearsky_rand = {}
 for run in runs:
     masks_clearsky_rand[run] = (
         datasets_rand[run]["clivi"] + datasets_rand[run]["qsvi"] + datasets_rand[run]["qgvi"]
-    ) < 1e-1
+    ) < 1e-2
 
 t_profile = {}
 for run in runs:
@@ -185,5 +185,9 @@ ax.legend(
     fontsize=10,
 )
 fig.savefig("plots/publication/t_profile_clearsky.pdf", bbox_inches="tight")
+
+# %% save data 
+for run in runs: 
+    t_profile[run].to_netcdf(f"/work/bm1183/m301049/icon_hcap_data/publication/t_profiles/{run}_t_profile_clearsky.nc")
 
 # %%

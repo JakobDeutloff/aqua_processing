@@ -412,7 +412,7 @@ def calc_w_sub(net_hr, stab):
 def calc_conv(wsub, zg, z_var="temp"):
     
     conv = -wsub.diff(z_var) / (
-        zg.interp(height=wsub[z_var], method="linear").diff(z_var).values
+        zg.interp(temp=wsub[z_var], method="linear").diff(z_var).values
     )
     conv[z_var] = (wsub[z_var][1:].values + wsub[z_var][:-1].values) / 2
     conv.attrs = {

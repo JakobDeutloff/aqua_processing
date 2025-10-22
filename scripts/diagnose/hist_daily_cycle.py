@@ -24,9 +24,9 @@ time_slices = np.arange(0, iwp.time.size, 24)
 
 hists = xr.DataArray(
     np.zeros((len(time_slices) - 1, 24)),
-    dims=['timestep', "local_hour"],
+    dims=['day', "local_hour"],
     coords={
-        "timestep": np.arange(0, len(time_slices) - 1),
+        "day": np.arange(0, len(time_slices) - 1),
         "local_hour": np.arange(0, 24)
     }
 )
@@ -36,7 +36,7 @@ for i in tqdm(range(0, len(time_slices) - 1)):
     sample = iwp.isel(time=slice(start, end))
     #  calculate local_time
     sample = sample.assign(
-        time_local=lambda d: d.time.dt.hour + (d.clon / 15)
+        time_local=lambda d: d.time.dt.hour + (d.time.dt.minute / 60) + (d.clon / 15)
     )
     sample["time_local"] = (
         sample["time_local"]
@@ -46,14 +46,14 @@ for i in tqdm(range(0, len(time_slices) - 1)):
     # calculate histogram
     bins = np.arange(0, 25, 1)
     hist, edges = np.histogram(
-        sample["time_local"].where(sample["iwp"] > 1e1),
+        sample["time_local"].where(sample["iwp"] > 1),
         bins=bins,
         density=False,
     )
     hists[i, :] = hist
 
 # %% save hists
-path = f"/work/bm1183/m301049/icon_hcap_data/{names[run]}/production/deep_clouds_daily_cycle_10.nc"
+path = f"/work/bm1183/m301049/icon_hcap_data/{names[run]}/production/deep_clouds_daily_cycle_exact.nc"
 if os.path.exists(path):
     os.remove(path)
 hists.to_netcdf(path)

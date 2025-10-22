@@ -2,6 +2,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from src.read_data import load_random_datasets, load_definitions
+import xarray as xr
 
 # %% load CRE data
 runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
@@ -93,5 +94,44 @@ for ax, letter in zip(axes, ["a", "b", "c"]):
 axes[2].invert_yaxis()
 fig.tight_layout()
 fig.savefig("plots/publication/sw_incoming.pdf", bbox_inches="tight")
+
+# %% save data 
+
+sw_incoming = xr.Dataset(
+    {
+        run: xr.DataArray(
+            sw_down_binned[run].values,
+            coords={"iwp_points": iwp_points},
+            dims=["iwp_points"],
+        )
+        for run in runs
+    }
+)
+
+time_difference = xr.Dataset(
+    {
+        run: xr.DataArray(
+            rad_time_binned[run].values,
+            coords={"iwp_points": iwp_points},
+            dims=["iwp_points"],
+        )
+        for run in runs
+    }
+)
+
+lat_distance = xr.Dataset(
+    {
+        run: xr.DataArray(
+            lat_binned[run].values,
+            coords={"iwp_points": iwp_points},
+            dims=["iwp_points"],
+        )
+        for run in runs
+    }
+)   
+
+sw_incoming.to_netcdf("/work/bm1183/m301049/icon_hcap_data/publication/incoming_sw/sw_incoming.nc")
+time_difference.to_netcdf("/work/bm1183/m301049/icon_hcap_data/publication/incoming_sw/time_difference.nc")
+lat_distance.to_netcdf("/work/bm1183/m301049/icon_hcap_data/publication/incoming_sw/lat_distance.nc")
 
 # %%

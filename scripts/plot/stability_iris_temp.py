@@ -216,7 +216,7 @@ for run in ["jed0022", "jed0033"]:
 
 # %% plot results in /m
 fig, axes = plt.subplots(1, 4, figsize=(14, 6), sharey=True)
-plot_const_hr = True
+plot_const_hr = False
 for run in runs:
     axes[0].plot(
         hrs[run]["net_hr"].where(masks_clearsky[run]).mean("index"),
@@ -251,14 +251,14 @@ if plot_const_hr:
         axes[2].plot(
             subs_cont[run],
             subs_cont[run]["temp"],
-            label=line_labels[run],
+            label='+4 K const HR',
             color=colors[run],
             linestyle="--",
         )
         axes[3].plot(
             conv_cont[run],
             conv_cont[run]["temp"],
-            label=line_labels[run],
+            label='+4 K const HR',
             color=colors[run],
             linestyle="--",
         )
@@ -267,16 +267,16 @@ axes[0].set_ylim([260, 200])
 for ax in axes:
     ax.spines[["top", "right"]].set_visible(False)
 axes[0].set_ylabel("Temperature / K")
-handles, names = axes[0].get_legend_handles_labels()
+handles, names = axes[3].get_legend_handles_labels()
 fig.legend(
     handles,
     names,
     loc="center",
     bbox_to_anchor=(0.5, -0.05),
-    ncol=3,
+    ncol=4,
 )
 fig.tight_layout()
-fig.savefig("plots/iwp_drivers/stab_iris_temp.png", dpi=300, bbox_inches="tight")
+fig.savefig("plots/iwp_drivers/stab_iris_temp_s.png", dpi=300, bbox_inches="tight")
 
 # %% make scatterplot of max convergence and Ts
 max_conv = {}

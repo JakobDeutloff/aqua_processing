@@ -78,7 +78,6 @@ for run in ["jed0022", "jed0033"]:
         subs_cont[run],
         datasets[run]["zg"].where(masks_clearsky[run]).mean("index"),
     )
-
 # %% plot results in /m
 fig, axes = plt.subplots(1, 4, figsize=(10, 4), sharey=True)
 plot_const_hr = True
@@ -233,3 +232,13 @@ ax.set_yticks(yticks)
 ax.spines[["top", "right", "bottom"]].set_visible(False)
 ax.set_ylabel(r"$\Delta D_{\mathrm{max}} /\Delta T_s$ / day$^{-1}$ K$^{-1}$")
 
+# %% save data
+for run in runs:
+    hrs[run].where(masks_clearsky[run]).mean("index").to_netcdf(f'/work/bm1183/m301049/icon_hcap_data/publication/stab_iris/{run}_heating_rate.nc')
+    stab[run].where(masks_clearsky[run]).mean("index").to_netcdf(f'/work/bm1183/m301049/icon_hcap_data/publication/stab_iris/{run}_stability.nc')
+    subs[run].to_netcdf(f'/work/bm1183/m301049/icon_hcap_data/publication/stab_iris/{run}_subsidence.nc')
+    conv[run].to_netcdf(f'/work/bm1183/m301049/icon_hcap_data/publication/stab_iris/{run}_convergence.nc')
+run = "jed0022"
+subs_cont[run].to_netcdf(f'/work/bm1183/m301049/icon_hcap_data/publication/stab_iris/{run}_subsidence_const_hr.nc')
+conv_cont[run].to_netcdf(f'/work/bm1183/m301049/icon_hcap_data/publication/stab_iris/{run}_convergence_const_hr.nc')
+# %%

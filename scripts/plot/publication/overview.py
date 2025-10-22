@@ -11,8 +11,6 @@ from src.read_data import (
     load_definitions,
 )
 
-# mpl.use("WebAgg")  # Use WebAgg backend for interactive plotting
-
 # %% load data
 runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
     load_definitions()
@@ -195,4 +193,35 @@ for ax, letter in zip(axes, ["a", "b", "c", "d", "e"]):
 fig.tight_layout()
 fig.savefig("plots/publication/overview.pdf", bbox_inches="tight")
 plt.show()
+# %% save data 
+cloudsat_hist = xr.DataArray(
+    histograms['cloudsat'],
+    coords=[(edges[:-1] + edges[1:]) / 2],
+    dims=["iwp_points"],
+    name="cloudsat_iwp_distribution",
+)
+dardar_hist = xr.DataArray(
+    histograms['dardar'],
+    coords=[(edges[:-1] + edges[1:]) / 2],
+    dims=["iwp_points"],
+    name="dardar_iwp_distribution",
+)
+
+histograms = xr.Dataset(
+    {
+        run: xr.DataArray(
+            histograms[run],
+            coords=[(edges[:-1] + edges[1:]) / 2],
+            dims=["iwp_points"],
+            name=f"{run}_iwp_distribution",
+        )
+        for run in runs
+
+    },
+    coords={"iwp_points": (edges[:-1] + edges[1:]) / 2},
+)
+histograms["cloudsat"] = cloudsat_hist
+histograms["dardar"] = dardar_hist
+histograms.to_netcdf("/work/bm1183/m301049/icon_hcap_data/publication/distributions/iwp_distributions.nc")
+
 # %%

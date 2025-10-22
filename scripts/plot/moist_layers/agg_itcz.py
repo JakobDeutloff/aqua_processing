@@ -13,8 +13,6 @@ from scipy.stats import linregress
 from functools import partial
 import pandas as pd
 
-# mpl.use("WebAgg")  # Use WebAgg backend for interactive plotting
-
 # %% load data
 ds = xr.open_dataset(
     "/work/bm1183/m301049/icon_hcap_data/plus2K/production/latlon/atm2d_latlon.nc"
@@ -66,7 +64,7 @@ ax.set_ylim(0, 100)
 fig.savefig("plots/moist_layers/pr_vs_prw_20_20.png", dpi=300, bbox_inches="tight")
 
 
-# %% calculate contourlength 32 mm
+# %% calculate contourlength
 def contour_length_for_time(t, cont=31):
     # Helper for parallel execution
     return int(get_contour_length(ds["prw"].sel(time=t), cont))
@@ -87,7 +85,7 @@ contour_lenghts_30 = xr.DataArray(
     attrs={"long_name": "Contour length of 31 mm PRW"},
 )
 
-# %% plot contour length 32mm
+# %% plot contour length
 fig, ax = plt.subplots(figsize=(10, 5))
 contour_lenghts_30.plot(ax=ax, color="k", label="Contour length")
 ax.set_xlabel("Time")

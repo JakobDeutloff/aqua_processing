@@ -8,7 +8,7 @@ from src.calc_variables import (
 import os
 
 # %% load data
-runs = ["jed0011", "jed0022", "jed0033"]
+runs = ["jed0011"]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K", "jed2224": "const_o3"}
 datasets = {}
 for run in runs:

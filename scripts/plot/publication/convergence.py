@@ -94,4 +94,16 @@ for ax, letter in zip(axes, ["a", "b"]):
     )
 fig.savefig('plots/publication/sup_conv.pdf', bbox_inches='tight')
 
+# %% save data 
+hists_30 = xr.Dataset(
+    {run: (["iwp_points"], hists_30[run]) for run in runs},
+    coords={"iwp_points": (iwp_bins[:-1] + iwp_bins[1:]) / 2},
+)
+hists_60 = xr.Dataset(
+    {run: (["iwp_points"], hists_60[run]) for run in runs},
+    coords={"iwp_points": (iwp_bins[:-1] + iwp_bins[1:]) / 2},
+)
+hists_30.to_netcdf('/work/bm1183/m301049/icon_hcap_data/publication/distributions/iwp_dist_30_days.nc')
+hists_60.to_netcdf('/work/bm1183/m301049/icon_hcap_data/publication/distributions/iwp_dist_60_days.nc')
+
 # %%

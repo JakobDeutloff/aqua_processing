@@ -3,6 +3,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
 from src.read_data import load_random_datasets, load_definitions
+import pickle as pkl
 
 # %%
 runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
@@ -76,5 +77,12 @@ for ax, letter in zip(axes, ["a", "b"]):
     )
 
 fig.savefig("plots/publication/lc_frac.pdf", bbox_inches="tight")
+
+# %% save data 
+for run in runs:
+    lc_binned[run]['iwp_bins'] = iwp_points
+    lc_binned_raw[run]['iwp_bins'] = iwp_points
+    lc_binned[run].to_netcdf(f"/work/bm1183/m301049/icon_hcap_data/publication/lc_fraction/{run}_lc_frac.nc")
+    lc_binned_raw[run].to_netcdf(f"/work/bm1183/m301049/icon_hcap_data/publication/lc_fraction/{run}_lc_frac_raw.nc")
 
 # %%

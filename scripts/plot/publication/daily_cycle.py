@@ -3,6 +3,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
 from src.read_data import load_random_datasets, load_definitions
+import pickle as pkl
 
 # %% load CRE data
 runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
@@ -45,7 +46,7 @@ histograms_iwp_5 = {}
 histograms_iwp_01 = {}
 edges = np.arange(0, 25, 1)
 for run in runs:
-    histograms_iwp[run] = (hists[run].sum("day") / hists['jed0011'].sum())[
+    histograms_iwp[run] = (hists[run].sum("timestep") / hists['jed0011'].sum())[
         "__xarray_dataarray_variable__"
     ].values
     histograms_iwp_5[run] = (hists_5[run].sum("day") / hists_5['jed0011'].sum())[
@@ -164,5 +165,44 @@ for run in runs:
 
 for run in runs[1:]:
     print(f"Increase in diurnal cycle for {line_labels[run]} compared to control by {(((diffs[run]-diffs['jed0011']) / diffs['jed0011'])*100):.0f}%")
+
+# %% plots for talk 
+
+fig, ax1 = plt.subplots(figsize=(8, 4))
+
+for run in ['jed0011']:
+    ax1.stairs(
+        histograms_iwp[run], edges, label=line_labels[run], color=colors[run],
+    )
+ax2 = ax1.twinx()
+SW_in.plot(
+    ax=ax2,
+    color="grey",
+    linewidth=3,
+    alpha=0.5)
+
+for ax in [ax1, ax2]:
+    ax.set_xlim([0.1, 23.9])
+    ax.spines[["top"]].set_visible(False)
+    ax.set_xticks([6, 12, 18])
+    ax.set_xlabel("Local Time / h")
+
+ax1.set_ylabel("P($I$ > 1 kg m$^{-2}$)")
+ax1.set_ylim([0.03, 0.057])
+ax1.set_yticks([0.03, 0.04, 0.05])
+ax2.set_ylim([0, 1400])
+ax2.set_ylabel("Incoming SW Radiation / W m$^{-2}$", color='grey')
+ax2.set_yticks([0, 700, 1400])
+ax2.tick_params(axis='y', labelcolor='grey')
+# add legend
+ax1.legend(frameon=False)
+
+fig.savefig("plots/publication/talk_dc.pdf", bbox_inches="tight")
+
+# %% save data 
+SW_in_xr = xr.Dataset(
+    {"SW_in": xr.DataArray(SW_in.values, coords={'time_points': (bins_gradient[1:] + bins_gradient[:-1])/2}, dims=["time_points"])}
+)
+SW_in_xr.to_netcdf("/work/bm1183/m301049/icon_hcap_data/publication/incoming_sw/SW_in_daily_cycle.nc")
 
 # %%

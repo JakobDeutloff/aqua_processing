@@ -3,6 +3,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
 from src.read_data import load_random_datasets, load_definitions, load_vgrid, load_cre, load_iwp_hists
+import pickle as pkl
 
 # %% load CRE data
 runs, exp_name, colors, line_labels, sw_color, lw_color, net_color, linestyles = (
@@ -124,4 +125,19 @@ for run in runs[1:]:
     print(
         f"{run}: {((means[run] - means[runs[0]]) / temp_deltas[run]):.2f}  K/K"
     )
+# %% save data
+
+temp_xr =  xr.Dataset(
+    {
+        run: xr.DataArray(
+            temp_binned[run].values,
+            coords={"iwp_points": iwp_points},
+            dims=["iwp_points"],
+            name=f"{run}_hc_temperature",
+        )
+        for run in runs
+    }
+)
+temp_xr.to_netcdf("/work/bm1183/m301049/icon_hcap_data/publication/hc_temp/hc_temperatures.nc")
+
 # %%
