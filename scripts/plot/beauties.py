@@ -7,53 +7,86 @@ import numpy as np
 from src.grid_helpers import to_healpix, merge_grid
 from matplotlib.colors import LinearSegmentedColormap, LogNorm
 
-# %% load data
-ds = (
-    xr.open_dataset(
-        "/work/bm1183/m301049/icon-mpim/experiments/jed0011/jed0011_atm_2d_19790707T000040Z.15356915.nc",
-        chunks={'time': 1},
-    )
-    .pipe(merge_grid)
-    .chunk(dict(ncells=-1))
-)
+# %%
+names = [
+    "papa",
+    "oma",
+    "elisa",
+    "remor",
+]
+cmaps = {
+    "papa": LinearSegmentedColormap.from_list("custom", ["#fcfcfc", "#00491C"]),
+    "oma": LinearSegmentedColormap.from_list("custom", ["#fcfcfc", "#480072"]),
+    "elisa": LinearSegmentedColormap.from_list("custom", ["#fcfcfc", "#000000"]),
+    "remor": LinearSegmentedColormap.from_list("custom", ["#fcfcfc", "#010E5D"]),
+}
+files = {
+    "papa": 'jed0011_atm_2d_19790701T000040Z.15356915.nc',
+    "oma": 'jed0011_atm_2d_19790721T000040Z.15371960.nc',
+    "elisa": 'jed0011_atm_2d_19790716T000040Z.15365936.nc',
+    "remor": 'jed0011_atm_2d_19790725T000040Z.15371960.nc',
+}
+
 
 # %% regrid to healpix
-ds_hp = to_healpix(ds)
+def plot_christmas(name):
+    ds = (
+        (
+            xr.open_dataset(
+                f"/work/bm1183/m301049/icon-mpim/experiments/jed0011/{files[name]}",
+                chunks={"time": 1, 'ncells':-1},
+            ).pipe(merge_grid)
+        )
+        .isel(time=0)
+    )
+    cmap = cmaps[name]
 
-# %% 
-transparent_white_cmap = LinearSegmentedColormap.from_list(
-    'transparent_white', [(1, 1, 1, 0), (1, 1, 1, 1)]
-)
+    ds_hp = to_healpix(ds)
 
-# %% load cloud condensate 
-dummy = ds_hp.isel(time=0)
-cond = (dummy['clivi'] + dummy['qsvi'] + dummy['qgvi'] + dummy['qrvi'] + dummy['cllvi']).load()
+    #  load cloud condensate
+    cond = (
+        ds_hp["clivi"] + ds_hp["qsvi"] + ds_hp["qgvi"] + ds_hp["qrvi"] + ds_hp["cllvi"]
+    ).load()
 
-# %% plot cloud condensate
+    # plot cloud condensate
+    fig_height_in = 7.87402
+    fig_width_in = 7.87402
 
-fig_height_in = 33.1
-fig_width_in = 46.8
+    projection = ccrs.Orthographic()
+    fig, ax = plt.subplots(
+        figsize=(fig_width_in, fig_height_in), subplot_kw={"projection": projection}
+    )
+    fig.set_dpi(400)
+    # Set background to transparent or white
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
+    ax.set_global()
+    ax.axis("off")  # Turn off axes BEFORE plotting
 
-projection = ccrs.Mollweide()
-fig, ax = plt.subplots(
-    figsize=(fig_width_in, fig_height_in), subplot_kw={"projection": projection}
-)
-fig.set_dpi(300)
-steelblue = '#07222e'
-ax.set_facecolor(steelblue)
-ax.spines['geo'].set_edgecolor(steelblue)
-fig.patch.set_facecolor(steelblue)
-ax.set_global()
-fig.subplots_adjust(left=0.03, right=0.97)
-_, _, nx, ny = np.array(ax.bbox.bounds, dtype=int)
+    _, _, nx, ny = np.array(ax.bbox.bounds, dtype=int)
 
-xlims = ax.get_xlim()
-ylims = ax.get_ylim()
+    xlims = ax.get_xlim()
+    ylims = ax.get_ylim()
+    im = egh.healpix_resample(
+        cond.values, xlims, ylims, nx, ny, ax.projection, "nearest", nest=True
+    )
+    im = im.fillna(0)
+
+    # Plot with extent to align with projection
+    ax.imshow(
+        im, extent=xlims + ylims, origin="lower", cmap=cmap, norm=LogNorm(6e-2, 1e1)
+    )
+
+    fig.savefig(
+        f"plots/screensaver/clouds_{name}.pdf",
+        bbox_inches="tight",
+        pad_inches=0.5,
+        dpi=400,
+    )
+    plt.close(fig)
+
 
 # %%
-im = egh.healpix_resample(cond.values, xlims, ylims, nx, ny, ax.projection, 'nearest', nest=True)
-
-# %%
-ax.imshow(im, extent=xlims + ylims, origin="lower", cmap=transparent_white_cmap, norm=LogNorm(3e-2, 1e1))
-#fig.savefig('plots/screensaver_print.pdf')
+for name in names:
+    im = plot_christmas(name)
 # %%

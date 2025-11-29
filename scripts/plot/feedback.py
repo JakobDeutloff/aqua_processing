@@ -105,23 +105,23 @@ histograms["dardar"] = histograms["dardar"] / np.isfinite(dardar['iwp']).sum().v
 
 # %% plot iwp hists
 fig, ax = plt.subplots(1, 1, figsize=(8, 5))
-ax.stairs(
-    histograms["cloudsat"], edges, label="2C-ICE", color="k", linewidth=4, alpha=0.5
-)
-ax.stairs(
-    histograms["dardar"], edges, label="DARDAR", color="brown", linewidth=4, alpha=0.5
-)
-for run in runs:
+# ax.stairs(
+#     histograms["cloudsat"], edges, label="2C-ICE", color="k", linewidth=4, alpha=0.5
+# )
+# ax.stairs(
+#     histograms["dardar"], edges, label="DARDAR", color="brown", linewidth=4, alpha=0.5
+# )
+for run in ['jed0011']:
     ax.stairs(histograms[run], edges, label=line_labels[run], color=colors[run], linewidth=1.5)
 
 ax.legend()
 ax.set_xscale("log")
-ax.set_ylim(0, 0.03)
+ax.set_ylim(0, 0.025)
 ax.set_ylabel("P($I$)")
 ax.set_xlabel("$I$ / kg m$^{-2}$")
 ax.set_xlim([1e-4, 40])
 ax.spines[["top", "right"]].set_visible(False)
-fig.savefig(f"plots/feedback/raw/iwp_hist.png", dpi=300, bbox_inches="tight")
+fig.savefig(f"plots/feedback/raw/iwp_hist_cont.png", dpi=300, bbox_inches="tight")
 
 # %% plot diff to control
 fig, ax = plt.subplots(1, 1, figsize=(8, 5))

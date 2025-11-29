@@ -31,7 +31,6 @@ for run in runs:
     hists_01[run] = xr.open_dataset(
         f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/deep_clouds_daily_cycle_01.nc"
     )
-
 # %% get normalised incoming SW for every bin
 bins_gradient = np.arange(0, 24.01, 0.1)
 SW_in = (
@@ -46,13 +45,13 @@ histograms_iwp_5 = {}
 histograms_iwp_01 = {}
 edges = np.arange(0, 25, 1)
 for run in runs:
-    histograms_iwp[run] = (hists[run].sum("timestep") / hists['jed0011'].sum())[
+    histograms_iwp[run] = (hists[run].sum("day") / hists[run].sum())[
         "__xarray_dataarray_variable__"
     ].values
-    histograms_iwp_5[run] = (hists_5[run].sum("day") / hists_5['jed0011'].sum())[
+    histograms_iwp_5[run] = (hists_5[run].sum("day") / hists_5[run].sum())[
         "__xarray_dataarray_variable__"
     ].values
-    histograms_iwp_01[run] = (hists_01[run].sum("day") / hists_01['jed0011'].sum())[
+    histograms_iwp_01[run] = (hists_01[run].sum("day") / hists_01[run].sum())[
         "__xarray_dataarray_variable__"
     ].values
 
@@ -141,7 +140,7 @@ for ax in [ax1, ax2]:
     ax.set_xlabel("Local Time / h")
 
 ax1.set_ylabel("P($I$ > 10$^{-1}$ kg m$^{-2}$)")
-ax1.set_ylim([0.03, 0.057])
+ax1.set_ylim([0.038, 0.05])
 ax1.set_yticks([0.03, 0.04, 0.05])
 ax2.set_ylim([0, 1400])
 ax2.set_ylabel("Incoming SW Radiation / W m$^{-2}$", color='grey')
@@ -204,5 +203,23 @@ SW_in_xr = xr.Dataset(
     {"SW_in": xr.DataArray(SW_in.values, coords={'time_points': (bins_gradient[1:] + bins_gradient[:-1])/2}, dims=["time_points"])}
 )
 SW_in_xr.to_netcdf("/work/bm1183/m301049/icon_hcap_data/publication/incoming_sw/SW_in_daily_cycle.nc")
+
+# %% calculate incoming SW 
+incoming_sw = {}
+for run in runs:
+    incoming_sw[run] = datasets[run]["rsdt"].where(datasets[run]['iwp']>0.1).mean()
+    print(f"Mean incoming SW for {line_labels[run]}: {incoming_sw[run].values:.2f} W m^-2")
+# %% calculate incoming SW from hist
+#bins_gradient = np.arange(0, 24.01, 0.1)
+SW_coarse = (
+    datasets["jed0011"]["rsdt"]
+    .groupby_bins(datasets["jed0011"]["time_local"], bins=np.arange(0, 25, 1))
+    .mean()
+) 
+# %%
+incoming_sw_hist = {}
+for run in runs:
+    incoming_sw_hist[run] = (SW_coarse * histograms_iwp_01[run]).sum()
+    print(f"Mean incoming SW from hist for {line_labels[run]}: {incoming_sw_hist[run].values:.2f} W m^-2")
 
 # %%
