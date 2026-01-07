@@ -18,11 +18,11 @@ else:
     print("PYTHONPATH is not set.")
 
 # %%
-run = sys.argv[1]
+run = 'jed0033' #sys.argv[1]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 colors = {'jed0011': 'k', 'jed0022': 'r', 'jed0033': 'orange'}
 ds = xr.open_dataset(
-    f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
+    f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_64.nc"
 ).sel(index=slice(None, 1e6))
 
 # %% initialize datasets
@@ -44,6 +44,12 @@ cs_albedo = xr.where(
     ds["conn"], sw_vars["clearsky_albedo"], sw_vars["wetsky_albedo"]
 )
 sw_vars["high_cloud_albedo"] = calc_hc_albedo(cs_albedo, sw_vars["allsky_albedo"])
+
+#%% print average albedo of deep clouds 
+mean_dc_albedo = sw_vars["high_cloud_albedo"].where(mask_parameterisation).where(ds['iwp']>1e-1).mean().values
+print(f"Mean albedo of deep clouds (IWP>0.1 kg/m2) for {run}: {mean_dc_albedo:.3f}")
+mean_cs_albedo = sw_vars["clearsky_albedo"].where(mask_parameterisation).where(ds['iwp']>1e-1).mean().values
+print(f"Mean clearsky albedo of deep clouds (IWP>0.1 kg/m2) for {run}: {mean_cs_albedo:.3f}")
 
 # %% calculate mean albedos by weighting with the incoming SW radiation in IWP bins
 IWP_bins = np.logspace(-4, 1, num=50)
@@ -77,6 +83,7 @@ ax.set_xlabel("IWP / kg m$^{-2}$")
 ax.set_xlim([1e-4, 1e1])
 
 fig.colorbar(pcol, label="High Cloud Albedo", location="bottom", ax=ax, shrink=0.8)
+
 
 # %% average over SW albedo bins
 mean_hc_albedo = np.zeros(len(IWP_points))
@@ -162,3 +169,5 @@ with open(f"data/params/{run}_hc_albedo_params.pkl", "wb") as f:
 with open(f"data/{run}_sw_vars_mean.pkl", "wb") as f:
     pickle.dump(mean_sw_vars, f)
 
+
+# %%

@@ -6,6 +6,7 @@ import easygems.healpix as egh
 import numpy as np
 from src.grid_helpers import to_healpix, merge_grid
 from matplotlib.colors import LinearSegmentedColormap, LogNorm
+from matplotlib.colors import to_rgba
 
 # %%
 names = [
@@ -14,12 +15,8 @@ names = [
     "elisa",
     "remor",
 ]
-cmaps = {
-    "papa": LinearSegmentedColormap.from_list("custom", ["#fcfcfc", "#00491C"]),
-    "oma": LinearSegmentedColormap.from_list("custom", ["#fcfcfc", "#480072"]),
-    "elisa": LinearSegmentedColormap.from_list("custom", ["#fcfcfc", "#000000"]),
-    "remor": LinearSegmentedColormap.from_list("custom", ["#fcfcfc", "#010E5D"]),
-}
+colors =  {"papa": "#00491C", "oma": "#2A0142", "elisa": "#000000", "remor": "#010E5D"}
+
 files = {
     "papa": 'jed0011_atm_2d_19790701T000040Z.15356915.nc',
     "oma": 'jed0011_atm_2d_19790721T000040Z.15371960.nc',
@@ -39,7 +36,6 @@ def plot_christmas(name):
         )
         .isel(time=0)
     )
-    cmap = cmaps[name]
 
     ds_hp = to_healpix(ds)
 
@@ -71,11 +67,17 @@ def plot_christmas(name):
         cond.values, xlims, ylims, nx, ny, ax.projection, "nearest", nest=True
     )
     im = im.fillna(0)
+    vmin, vmax = 6e-2, 1e1
+    norm = LogNorm(vmin=vmin, vmax=vmax)
+    # Create RGBA array with constant color
+    rgba = np.zeros((*im.shape, 4))
+    base_color = to_rgba(colors[name])[:3]  # Get RGB components
+    rgba[..., 0] = base_color[0]  # R
+    rgba[..., 1] = base_color[1]  # G
+    rgba[..., 2] = base_color[2]  # B
+    rgba[..., 3] = norm(np.clip(im, vmin, vmax))  # Alpha varies on log scale
 
-    # Plot with extent to align with projection
-    ax.imshow(
-        im, extent=xlims + ylims, origin="lower", cmap=cmap, norm=LogNorm(6e-2, 1e1)
-    )
+    ax.imshow(rgba, extent=xlims + ylims, origin="lower")
 
     fig.savefig(
         f"plots/screensaver/clouds_{name}.pdf",
