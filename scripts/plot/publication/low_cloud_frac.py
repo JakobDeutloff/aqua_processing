@@ -20,6 +20,7 @@ for run in runs:
 # %% bin lc fraction
 lc_binned = {}
 lc_binned_raw = {}
+lc_binned_all = {}
 for run in runs:
     lc_binned[run] = (
         ((datasets[run]["lwp"] > 1e-4) & (datasets[run]["conn"] == 0))
@@ -31,50 +32,64 @@ for run in runs:
         .groupby_bins(datasets_raw[run]["iwp"], iwp_bins)
         .mean()
     )
+    lc_binned_all[run] = (
+        (datasets[run]["lwp"] > 1e-4)
+        .groupby_bins(datasets[run]["iwp"], iwp_bins)
+        .mean()
+    )
 
 # %% plot lc fraction
-fig, axes = plt.subplots(1, 2, figsize=(10, 4), sharey=True, sharex=True)
+fig, axes = plt.subplots(2, 2, figsize=(10, 8), sharey='row', sharex='col')
 for run in runs:
-    axes[0].plot(
+    axes[0, 0].plot(
+        iwp_points,
+        lc_binned_all[run],
+        color=colors[run],
+    )
+    axes[1, 0].plot(
         iwp_points,
         lc_binned[run],
         label=line_labels[run],
         color=colors[run],
     )
-    axes[1].plot(
+    axes[1, 1].plot(
         iwp_points,
         lc_binned_raw[run],
         color=colors[run],
     )
 
-for ax in axes:
-    ax.set_xlabel("$I$ / $kg m^{-2}$")
+for ax in axes[1, :]:
+    ax.set_xlabel("$I$ / kg m$^{-2}$")
     ax.set_xscale("log")
     ax.spines[["top", "right"]].set_visible(False)
+axes[0, 0].spines[["top", "right"]].set_visible(False)
+for ax in axes[:, 0]:
+    ax.set_ylabel('Liquid Cloud Fraction')
+axes[0, 0].set_title("All Liquid Clouds")
+axes[1, 0].set_title("With Tuning Factor")
+axes[1, 1].set_title("Without Tuning Factor")
 
-axes[0].set_ylabel("Liquid Cloud Fraction")
-axes[0].set_title("With Tuning Factor")
-axes[1].set_title("Without Tuning Factor")
-handles, labels = axes[0].get_legend_handles_labels()
+handles, labels = axes[1, 0].get_legend_handles_labels()
 fig.legend(
     handles,
     labels,
     loc="lower center",
-    ncol=len(runs),
-    bbox_to_anchor=(0.5, -0.15),
+    ncol=1,
+    bbox_to_anchor=(0.7, 0.7),
     frameon=False,
 )
 # add letters 
-for ax, letter in zip(axes, ["a", "b"]):
+for ax, letter in zip([axes[0, 0], axes[1, 0], axes[1, 1]], ["a", "b", "c"]):
     ax.text(
         0.03,
-        1,
+        1.1,
         letter,
         transform=ax.transAxes,
         fontsize=14,
         fontweight="bold",
         va="top",
     )
+axes[0, 1].remove()
 
 fig.savefig("plots/publication/lc_frac.pdf", bbox_inches="tight")
 

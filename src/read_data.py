@@ -147,7 +147,7 @@ def load_vgrid():
     return vgrid
 
 
-def load_cre():
+def load_cre(name='raw'):
     """
     Load  HCRE.
 
@@ -160,7 +160,7 @@ def load_cre():
     cre_data = {}
     for run in runs:
         cre_data[run] = xr.open_dataset(
-            f"/work/bm1183/m301049/icon_hcap_data/{experiments[run]}/production/cre/{run}_cre_raw.nc"
+            f"/work/bm1183/m301049/icon_hcap_data/{experiments[run]}/production/cre/{run}_cre_{name}.nc"
         )
 
     return cre_data

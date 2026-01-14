@@ -30,7 +30,7 @@ sw_vars = xr.Dataset()
 mean_sw_vars = pd.DataFrame()
 
 # %% set mask
-mask_parameterisation = (ds['mask_low_cloud'] == 0) & (ds['hc_top_temperature'] < 255) 
+mask_parameterisation = True #(ds['mask_low_cloud'] == 0) & (ds['hc_top_temperature'] < 255) 
 
 # %% calculate high cloud albedo
 def calc_hc_albedo(a_cs, a_as):
@@ -46,10 +46,8 @@ cs_albedo = xr.where(
 sw_vars["high_cloud_albedo"] = calc_hc_albedo(cs_albedo, sw_vars["allsky_albedo"])
 
 #%% print average albedo of deep clouds 
-mean_dc_albedo = sw_vars["high_cloud_albedo"].where(mask_parameterisation).where(ds['iwp']>1e-1).mean().values
-print(f"Mean albedo of deep clouds (IWP>0.1 kg/m2) for {run}: {mean_dc_albedo:.3f}")
-mean_cs_albedo = sw_vars["clearsky_albedo"].where(mask_parameterisation).where(ds['iwp']>1e-1).mean().values
-print(f"Mean clearsky albedo of deep clouds (IWP>0.1 kg/m2) for {run}: {mean_cs_albedo:.3f}")
+mean_dc_albedo = sw_vars["allsky_albedo"].where(mask_parameterisation).where((ds['iwp']<1e-1) & (ds['iwp']>1e-2)).mean().values
+print(f"Mean albedo of deep clouds (IWP 0.01-0.1 kg/m2) for {run}: {mean_dc_albedo:.3f}")
 
 # %% calculate mean albedos by weighting with the incoming SW radiation in IWP bins
 IWP_bins = np.logspace(-4, 1, num=50)

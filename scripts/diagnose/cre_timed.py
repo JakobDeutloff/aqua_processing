@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import os
 
 # %% load data
-runs = ["jed0011", "jed0022", "jed0033", "jed2224"]
+runs = ["jed0011", "jed0022", "jed0033"]
 exp_name = {
     "jed0011": "control",
     "jed0022": "plus4K",
@@ -18,6 +18,16 @@ for run in runs:
     datasets[run] = xr.open_dataset(
         f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_64.nc"
     )
+
+# %% if needed, load different  connectedness
+for run in runs:
+    conn_ds = xr.open_dataset(
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_connectedness_20.nc"
+    )
+    datasets[run] = datasets[run].assign(conn=conn_ds["conn"])
+    datasets[run]['mask_low_cloud'] = (
+        (datasets[run]["conn"] == 0) & (datasets[run]["lwp"] > 1e-4)
+    ) * 1
 
 # %% calculate cre clearsky and wetsky
 for run in runs:
@@ -109,6 +119,83 @@ for run in runs:
         "long_name": "Cloud Radiative Effect",
     }
 
+# %% bin cre ws and cs
+cre_interp_ws = {
+    "jed0011": cre_arr.copy(),
+    "jed0022": cre_arr.copy(),
+    "jed0033": cre_arr.copy(),
+    "jed2224": cre_arr.copy(),
+}
+cre_interp_cs = {
+    "jed0011": cre_arr.copy(),
+    "jed0022": cre_arr.copy(),
+    "jed0033": cre_arr.copy(),
+    "jed2224": cre_arr.copy(),
+}
+for run in runs:
+    cre_interp_ws[run]["net"] = (
+        datasets[run]["cre_net_ws"]
+        .groupby_bins(datasets[run]["iwp"], iwp_bins)
+        .mean()
+    )
+    cre_interp_ws[run]["sw"] = (
+        datasets[run]["cre_sw_ws"]
+        .groupby_bins(datasets[run]["iwp"], iwp_bins)
+        .mean()
+    )
+    cre_interp_ws[run]["lw"] = (
+        datasets[run]["cre_lw_ws"]
+        .groupby_bins(datasets[run]["iwp"], iwp_bins)
+        .mean()
+    )
+    cre_interp_cs[run]["net"] = (
+        datasets[run]["cre_net_cs"]
+        .groupby_bins(datasets[run]["iwp"], iwp_bins)
+        .mean()
+    )
+    cre_interp_cs[run]["sw"] = (
+        datasets[run]["cre_sw_cs"]
+        .groupby_bins(datasets[run]["iwp"], iwp_bins)
+        .mean()
+    )
+    cre_interp_cs[run]["lw"] = (
+        datasets[run]["cre_lw_cs"]
+        .groupby_bins(datasets[run]["iwp"], iwp_bins)
+        .mean()
+    )
+
+# %% convert to xarray
+for run in runs:
+    cre_interp_ws[run] = xr.Dataset(
+        {
+            "net": (["iwp"], cre_interp_ws[run]["net"].values),
+            "sw": (["iwp"], cre_interp_ws[run]["sw"].values),
+            "lw": (["iwp"], cre_interp_ws[run]["lw"].values),
+        },
+        coords={
+            "iwp": ("iwp", iwp_points),
+        },
+    )
+    cre_interp_ws[run].attrs = {
+        "units": "W m^-2",
+        "long_name": "Cloud Radiative Effect Wetsky",
+    }
+    cre_interp_cs[run] = xr.Dataset(
+        {
+            "net": (["iwp"], cre_interp_cs[run]["net"].values),
+            "sw": (["iwp"], cre_interp_cs[run]["sw"].values),
+            "lw": (["iwp"], cre_interp_cs[run]["lw"].values),
+        },
+        coords={
+            "iwp": ("iwp", iwp_points),
+        },
+    )
+    cre_interp_cs[run].attrs = {
+        "units": "W m^-2",
+        "long_name": "Cloud Radiative Effect Clearsky",
+    }
+
+
 # %% plot difference between CREs
 fig, axes = plt.subplots(
     3,
@@ -154,8 +241,19 @@ axes[2].set_ylabel("CRE lw / W m$^{-2}$")
 
 # %% save cre
 for run in runs:
-    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_raw.nc"
+    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_conn_20.nc"
     if os.path.exists(path):
         os.remove(path)
     cre_interp[run].to_netcdf(path)
+# %% save cre ws and cs
+for run in runs:
+    path_ws = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_wetsky.nc"
+    path_cs = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_clearsky.nc"
+    if os.path.exists(path_ws):
+        os.remove(path_ws)
+    if os.path.exists(path_cs):
+        os.remove(path_cs)
+    cre_interp_ws[run].to_netcdf(path_ws)
+    cre_interp_cs[run].to_netcdf(path_cs)
+
 # %%
