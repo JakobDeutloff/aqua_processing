@@ -8,7 +8,7 @@
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=256G
 #SBATCH --partition=compute
-#SBATCH --account=bm1183
+#SBATCH --account=mh1126
 
 set -o errexit -o nounset -o pipefail -o xtrace
 

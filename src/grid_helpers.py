@@ -24,14 +24,14 @@ def merge_grid(data_ds):
     ds = ds.assign_coords(ncells=np.arange(ds.sizes["ncells"]))
     return ds
 
-def to_healpix(ds, save_path=None):
+def to_healpix(ds, save_path=None, zoom=10):
     """
     Regrid ds from ICON R2B9 grid to healpix grid
     """
 
     # load weights
     weights = xr.open_dataset("/home/m/m301049/aqua_processing/data/weights_z10.nc")
-    order = zoom = 10
+    order = zoom
     nside = hp.order2nside(order)
     npix = hp.nside2npix(nside)
 
