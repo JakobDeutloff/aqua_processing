@@ -16,18 +16,18 @@ exp_name = {
 datasets = {}
 for run in runs:
     datasets[run] = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_64.nc"
+        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_64_2.nc"
     )
 
 # %% if needed, load different  connectedness
-for run in runs:
-    conn_ds = xr.open_dataset(
-        f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_connectedness_20.nc"
-    )
-    datasets[run] = datasets[run].assign(conn=conn_ds["conn"])
-    datasets[run]['mask_low_cloud'] = (
-        (datasets[run]["conn"] == 0) & (datasets[run]["lwp"] > 1e-4)
-    ) * 1
+# for run in runs:
+#     conn_ds = xr.open_dataset(
+#         f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_connectedness_20.nc"
+#     )
+#     datasets[run] = datasets[run].assign(conn=conn_ds["conn"])
+#     datasets[run]['mask_low_cloud'] = (
+#         (datasets[run]["conn"] == 0) & (datasets[run]["lwp"] > 1e-4)
+#     ) * 1
 
 # %% calculate cre clearsky and wetsky
 for run in runs:
@@ -241,19 +241,19 @@ axes[2].set_ylabel("CRE lw / W m$^{-2}$")
 
 # %% save cre
 for run in runs:
-    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_conn_20.nc"
+    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_rand_2.nc"
     if os.path.exists(path):
         os.remove(path)
     cre_interp[run].to_netcdf(path)
 # %% save cre ws and cs
-for run in runs:
-    path_ws = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_wetsky.nc"
-    path_cs = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_clearsky.nc"
-    if os.path.exists(path_ws):
-        os.remove(path_ws)
-    if os.path.exists(path_cs):
-        os.remove(path_cs)
-    cre_interp_ws[run].to_netcdf(path_ws)
-    cre_interp_cs[run].to_netcdf(path_cs)
+# for run in runs:
+#     path_ws = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_wetsky.nc"
+#     path_cs = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/cre/{run}_cre_clearsky.nc"
+#     if os.path.exists(path_ws):
+#         os.remove(path_ws)
+#     if os.path.exists(path_cs):
+#         os.remove(path_cs)
+#     cre_interp_ws[run].to_netcdf(path_ws)
+#     cre_interp_cs[run].to_netcdf(path_cs)
 
 # %%

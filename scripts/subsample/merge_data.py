@@ -1,6 +1,9 @@
 # %% import
 import os
 from src.sampling import merge_files
+import dask 
+
+dask.config.set(scheduler='synchronous')
 
 # %% set names
 runs = ["jed0011", "jed0022", "jed0033", "jed2224"]
@@ -26,10 +29,10 @@ for run in runs:
         run, filenames, exp_name[run]
     )
 # %% delete single files 
-for run in runs:
-    for file in filenames:
-        path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/"
-        files = [f for f in os.listdir(path) if (f.startswith(f"{run}_{file}")) or (f.startswith(f"{followups[run]}_{file}"))]
-        for file in files:
-            os.remove(path+file)
+# for run in runs:
+#     for file in filenames:
+#         path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/raw/"
+#         files = [f for f in os.listdir(path) if (f.startswith(f"{run}_{file}")) or (f.startswith(f"{followups[run]}_{file}"))]
+#         for file in files:
+#             os.remove(path+file)
 # %%

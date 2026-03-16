@@ -4,10 +4,10 @@ from src.sampling import get_random_coords
 
 # %%
 runs = [
-    "jed2224"
-#    "jed0011",
-#    "jed0022",
-#    "jed0033",
+    "jed2224",
+    "jed0011",
+    "jed0022",
+    "jed0033",
 ]
 
 followups = {
@@ -41,7 +41,7 @@ exp_name = {
 
 for run in runs:
     print(f"get random coords for {run}")
-    get_random_coords(run, followups[run], model_config[run], exp_name[run], number=0)
+    get_random_coords(run, followups[run], model_config[run], exp_name[run], number=2)
     
     for file in files:
         os.system(f'sbatch scripts/subsample/submitter_all.sh {run} {file}')

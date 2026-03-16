@@ -18,7 +18,7 @@ else:
     print("PYTHONPATH is not set.")
 
 # %%
-run = 'jed0033' #sys.argv[1]
+run = sys.argv[1]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 colors = {'jed0011': 'k', 'jed0022': 'r', 'jed0033': 'orange'}
 ds = xr.open_dataset(
@@ -30,7 +30,7 @@ sw_vars = xr.Dataset()
 mean_sw_vars = pd.DataFrame()
 
 # %% set mask
-mask_parameterisation = True #(ds['mask_low_cloud'] == 0) & (ds['hc_top_temperature'] < 255) 
+mask_parameterisation = ds['mask_low_cloud'] == 0
 
 # %% calculate high cloud albedo
 def calc_hc_albedo(a_cs, a_as):
@@ -46,7 +46,7 @@ cs_albedo = xr.where(
 sw_vars["high_cloud_albedo"] = calc_hc_albedo(cs_albedo, sw_vars["allsky_albedo"])
 
 #%% print average albedo of deep clouds 
-mean_dc_albedo = sw_vars["allsky_albedo"].where(mask_parameterisation).where((ds['iwp']<1e-1) & (ds['iwp']>1e-2)).mean().values
+mean_dc_albedo = sw_vars["allsky_albedo"].where(mask_parameterisation).where(ds['iwp']>1e-1).mean().values
 print(f"Mean albedo of deep clouds (IWP 0.01-0.1 kg/m2) for {run}: {mean_dc_albedo:.3f}")
 
 # %% calculate mean albedos by weighting with the incoming SW radiation in IWP bins
@@ -160,12 +160,14 @@ ax.set_xlim(1e-4, 1e1)
 
 plt.show()
 
-# %% save coefficients as pkl file
+# %% save coefficients as pkl file and albedo
 sw_vars.to_netcdf(f"data/{run}_sw_vars.nc")
 with open(f"data/params/{run}_hc_albedo_params.pkl", "wb") as f:
     pickle.dump(res.x, f)
 with open(f"data/{run}_sw_vars_mean.pkl", "wb") as f:
     pickle.dump(mean_sw_vars, f)
+with open(f"data/{run}_hc_albedo.pkl", "wb") as f:
+    pickle.dump(mean_sw_vars["interpolated_albedo"], f)
 
 
 # %%

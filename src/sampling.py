@@ -84,11 +84,14 @@ def subsample_file(file, exp_name, number=0):
     # save in random sample folder
     print("Saving data")
     filename = file.split("/")[-1]
-    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/{filename}"
-    if os.path.exists(path):
-        os.remove(path)
+    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/raw/"
+    file_path = path + filename
+    os.makedirs(path, exist_ok=True)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
     with ProgressBar():
-        ds_random.to_netcdf(path)
+        ds_random.to_netcdf(file_path)
 
     # clear RAM
     del ds
@@ -101,7 +104,7 @@ def subsample_file(file, exp_name, number=0):
 
 def get_random_coords(run, followup, model_config, exp_name, number=0):
 
-    path = f"/work/bm1183/m301049/{model_config}/experiments/{run}/"
+    path = f"/work/bu1562/m301049/{model_config}/experiments/{run}/"
 
     # check if random coords for that number already exist
     if os.path.exists(
@@ -118,7 +121,7 @@ def get_random_coords(run, followup, model_config, exp_name, number=0):
     if followup is None:
         ds = ds_first
     else:
-        path = f"/work/bm1183/m301049/{model_config}/experiments/{followup}/"
+        path = f"/work/bu1562/m301049/{model_config}/experiments/{followup}/"
         ds_second = (
             xr.open_mfdataset(f"{path}{followup}_atm_3d_main_19*.nc", chunks={})
             .pipe(merge_grid)
@@ -134,7 +137,7 @@ def get_random_coords(run, followup, model_config, exp_name, number=0):
     time = ds_trop.sizes["time"]
 
     # Generate unique pairs of random indices
-    num_samples = int(1e7)
+    num_samples = int(2e7)
     total_indices = ncells * time
     random_indices = da.random.randint(0, total_indices, num_samples).compute()
 
@@ -246,7 +249,7 @@ def sample_profiles(
 # %% concatenate single files
 def concatenate_files(run, followup, exp_name, file):
     datasets = {}
-    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/"
+    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/raw/"
     filelist = [
         f"{path}{f}"
         for f in os.listdir(path)
@@ -258,7 +261,7 @@ def concatenate_files(run, followup, exp_name, file):
         combine="nested",
         concat_dim=["index"],
     ).sortby("index")
-    datasets[file].to_netcdf(f"{path}{run}_{file[:-3]}_randsample.nc")
+    datasets[file].to_netcdf(f"{path}{run}_{file[:-3]}_randsample_2.nc")
 
 
 # %% merge 2D and 3D data
@@ -267,10 +270,13 @@ def merge_files(run, filenames, exp_name):
     for file in filenames:
         datasets.append(
             xr.open_dataset(
-                f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/{run}_{file[:-3]}_randsample.nc"
+                f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/raw/{run}_{file[:-3]}_randsample_2.nc",
+                chunks={"index": 100000},
+                engine="h5netcdf",
             )
         )
     datasets[0] = datasets[0].rename({"height_2": "s_height_2", "height": "s_height"})
-    ds = xr.merge(datasets)
-    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/{run}_randsample.nc"
-    ds.to_netcdf(path)
+    ds = xr.merge(datasets, join="override", compat="override")
+    path = f"/work/bm1183/m301049/icon_hcap_data/{exp_name}/production/random_sample/{run}_randsample_2.nc"
+    with ProgressBar():
+        ds.to_netcdf(path, engine="h5netcdf")

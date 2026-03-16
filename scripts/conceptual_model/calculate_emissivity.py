@@ -22,7 +22,7 @@ run = sys.argv[1]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 colors = {'jed0011': 'k', 'jed0022': 'r', 'jed0033': 'orange'}
 ds = xr.open_dataset(
-    f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
+    f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_64.nc"
 ).sel(index=slice(None, 1e6))
 
 # %% initialize dataset for new variables
@@ -31,7 +31,7 @@ mean_lw_vars = pd.DataFrame()
 
 
 # %% mask for parameterization
-mask = (ds['mask_low_cloud'] == 0) 
+mask = ds['mask_low_cloud'] == 0
 # %% calculate high cloud emissivity
 sigma = 5.67e-8  # W m-2 K-4
 LW_out_as = ds["rlut"]
@@ -53,7 +53,7 @@ mean_hc_emissivity = (
         IWP_bins,
         labels=IWP_points,
     )
-    .mean()
+    .median()
 )
 mean_hc_temp = (
     ds['hc_top_temperature'].where(mask)
@@ -125,5 +125,7 @@ with open(f"data/params/{run}_hc_emissivity_params.pkl", "wb") as f:
     pickle.dump(np.array([1., res.x[0], res.x[1]]), f)
 with open(f"data/{run}_lw_vars_mean.pkl", "wb") as f:
     pickle.dump(mean_lw_vars, f)
+with open(f"data/{run}_hc_emissivity.pkl", "wb") as f:
+    pickle.dump(mean_hc_emissivity, f)
 
 # %%

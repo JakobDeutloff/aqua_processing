@@ -39,7 +39,7 @@ def calculate_hc_temperature_bright(ds, z_grid):
     top_idx_thick = np.abs(ds["ta"].where(mask_troposphere) - T_bright).argmin("height")
     top_idx_thin = (ds["cli"] + ds["qs"] + ds["qg"]).argmax("height")
 
-    top_idx = xr.where(top_idx_thick < top_idx_thin, top_idx_thick, top_idx_thin)
+    top_idx = xr.where(top_idx_thick < top_idx_thin, top_idx_thick, top_idx_thin).compute()
     p_top = ds.isel(height=top_idx).phalf
     T_h = ds["ta"].isel(height=top_idx)
 
@@ -213,10 +213,10 @@ def calc_connected(ds, zg, frac_no_cloud=0.05, mean_height=11645):
 
     # define ice and liquid content needed for connectedness
     no_ice_cloud = (
-        ice > (frac_no_cloud * (mean_height / cloud_height) ** 0 * ice.max("height"))
+        ice > (frac_no_cloud * (mean_height / cloud_height) ** 7 * ice.max("height"))
     ) * 1
     no_liq_cloud = (
-        liq > (frac_no_cloud * (mean_height / cloud_height) ** 0 * liq.max("height"))
+        liq > (frac_no_cloud * (mean_height / cloud_height) ** 7 * liq.max("height"))
     ) * 1
     no_cld = (
         no_liq_cloud + no_ice_cloud
@@ -240,8 +240,8 @@ def calc_connected(ds, zg, frac_no_cloud=0.05, mean_height=11645):
     connected = connected.where(mask_both_clds, np.nan)
 
     # Calculate the height of maximum ice and liquid content
-    h_ice = ice.argmax("height")
-    h_liq = liq.argmax("height")
+    h_ice = ice.argmax("height").compute()
+    h_liq = liq.argmax("height").compute()
 
     # Calculate the mean cloud content between the heights of maximum ice and liquid content
     cld_range_mean = no_cld.where(

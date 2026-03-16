@@ -24,11 +24,11 @@ else:
     print("PYTHONPATH is not set.")
 
 # %% read data
-run = sys.argv[1]
+run = 'jed0022' #sys.argv[1]
 exp_name = {"jed0011": "control", "jed0022": "plus4K", "jed0033": "plus2K"}
 ds = xr.open_dataset(
-    f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed.nc"
-).sel(index=slice(None, 1e6))
+    f"/work/bm1183/m301049/icon_hcap_data/{exp_name[run]}/production/random_sample/{run}_randsample_processed_64.nc"
+).sel(index=slice(None, 1e7))
 
 # %% initialize dataset
 lower_trop_vars = xr.Dataset()
@@ -49,6 +49,12 @@ lower_trop_vars["albedo_allsky"] = albedo_allsky
 lower_trop_vars["albedo_clearsky"] = albedo_clearsky
 alpha_t = xr.where(ds["mask_low_cloud"], albedo_allsky, albedo_clearsky)
 lower_trop_vars["alpha_t"] = alpha_t
+
+# %% calculate mean lt albedo for I>0.1
+mean_lt_albedo = (lower_trop_vars['alpha_t']*ds['rsdt']).where(ds['iwp']>1e-1).mean()
+mean_lc_fraction = ds['mask_low_cloud'].where(ds['iwp']>1e-1).mean()
+print(f"Mean albedo for {exp_name[run]} IWP > 0.1 kg/m2: {mean_lt_albedo.values:.3f}")
+print(f"Mean low cloud fraction for {exp_name[run]} IWP > 0.1 kg/m2: {mean_lc_fraction.values:.3f}")
 
 # %% average and interpolate albedo
 LWP_bins = np.logspace(-14, 2, num=150)
@@ -128,7 +134,7 @@ for i in range(len(LWP_bins) - 1):
     LWP_mask = (ds["lwp"] > LWP_bins[i]) & (ds["lwp"] <= LWP_bins[i + 1])
     number_of_points[i] = (
         lower_trop_vars["albedo_allsky"]
-        .where(LWP_mask & ~mask_connected & ds["mask_height"])
+        .where(LWP_mask & ~mask_connected)
         .count()
         .values
     )
@@ -144,7 +150,7 @@ mean_clearsky_albedo = float(
     (
         (
             lower_trop_vars["albedo_clearsky"].where(
-                ~ds["mask_low_cloud"] & ds["mask_height"],
+                ~ds["mask_low_cloud"],
             )
         )
         .mean()

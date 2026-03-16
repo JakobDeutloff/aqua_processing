@@ -12,6 +12,10 @@ iwp_bins = np.logspace(-4, np.log10(40), 51)
 iwp_points = (iwp_bins[:-1] + iwp_bins[1:]) / 2
 datasets = load_random_datasets()
 
+# %%
+for run in runs:
+    datasets[run]['time_local'] = (datasets[run]["time"].dt.hour + (datasets[run]["time"].dt.minute / 60) + (datasets[run]["clon"] / 15)) % 24
+
 # %% mean SW down for I>1
 for run in runs:
     sw_down = datasets[run]["rsdt"].where(datasets[run]["iwp"] > 1).mean()
@@ -93,7 +97,7 @@ for ax, letter in zip(axes, ["a", "b", "c"]):
     )
 axes[2].invert_yaxis()
 fig.tight_layout()
-fig.savefig("plots/publication/sw_incoming.pdf", bbox_inches="tight")
+#fig.savefig("plots/publication/sw_incoming.pdf", bbox_inches="tight")
 
 # %% save data 
 
